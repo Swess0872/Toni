@@ -68,13 +68,15 @@ ACME_EMAIL=<deine-mail> \
 ./deploy/bootstrap/install.sh
 ```
 
-Das Skript installiert Argo CD, legt die Secrets an (JWT-Schlüssel, erster Admin-Login) und erstellt die Root-Application. Ab dann installiert Argo CD alles Weitere aus [deploy/platform/](deploy/platform/):
+Das Skript installiert Argo CD (falls noch nicht vorhanden), legt die Secrets an (JWT-Schlüssel, erster Admin-Login) und erstellt die Root-Application `toni-root`. Was schon im Cluster läuft (Argo CD, Traefik, cert-manager, CloudNativePG), wird erkannt und nicht angefasst. Läuft Argo CD in einem anderen Namespace als `argocd`, setze `ARGOCD_NAMESPACE=<ns>`.
+
+Ab dann installiert Argo CD alles Weitere aus [deploy/platform/](deploy/platform/):
 
 - **Traefik** (Ingress; wird übersprungen, wenn schon eines läuft, z.B. bei k3s)
 - **cert-manager** + Let's-Encrypt-Issuer
 - **CloudNativePG** (Postgres-Operator) und die Toni-Datenbank
 - **Toni** (API + Web) aus [deploy/charts/toni/](deploy/charts/toni/)
-- **Argo CD selbst**: Updates laufen über [deploy/argocd/kustomization.yaml](deploy/argocd/kustomization.yaml)
+- **Argo CD selbst**: Updates laufen über [deploy/argocd/kustomization.yaml](deploy/argocd/kustomization.yaml). Gilt nur, wenn das Skript Argo CD installiert hat; ein schon vorhandenes Argo CD bleibt, wie es ist.
 
 Für ein **privates Repo** zusätzlich `GITHUB_TOKEN=<PAT mit repo + read:packages>` mitgeben.
 

@@ -5,7 +5,10 @@ acmeEmail: ""
 # Set by install.sh when GITHUB_TOKEN is given (private GHCR packages).
 imagePullSecret: ""
 
+# Each component can be switched off if the cluster already has it;
+# install.sh detects existing installations and sets these for you.
 argocd:
+  # Let Argo CD upgrade itself from deploy/argocd. Off when Argo CD was installed separately.
   selfManaged: true
 
 traefik:
@@ -17,9 +20,11 @@ traefik:
   hostPorts: true
 
 certManager:
+  enabled: true
   chartVersion: v1.21.3
 
 cnpg:
+  enabled: true
   chartVersion: 0.29.1
 
 toni:

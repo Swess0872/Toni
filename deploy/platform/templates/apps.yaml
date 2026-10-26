@@ -3,7 +3,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: argocd
-  namespace: argocd
+  namespace: {{ .Release.Namespace }}
   annotations:
     argocd.argoproj.io/sync-wave: "-3"
 spec:
@@ -14,7 +14,7 @@ spec:
     path: deploy/argocd
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd
+    namespace: {{ .Release.Namespace }}
   syncPolicy:
     automated:
       selfHeal: true
@@ -27,7 +27,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: traefik
-  namespace: argocd
+  namespace: {{ .Release.Namespace }}
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
@@ -69,11 +69,12 @@ spec:
   {{- include "platform.syncPolicy" . | nindent 2 }}
 ---
 {{- end }}
+{{- if .Values.certManager.enabled }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cert-manager
-  namespace: argocd
+  namespace: {{ .Release.Namespace }}
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
@@ -91,11 +92,13 @@ spec:
     namespace: cert-manager
   {{- include "platform.syncPolicy" . | nindent 2 }}
 ---
+{{- end }}
+{{- if .Values.cnpg.enabled }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cloudnative-pg
-  namespace: argocd
+  namespace: {{ .Release.Namespace }}
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
@@ -109,11 +112,12 @@ spec:
     namespace: cnpg-system
   {{- include "platform.syncPolicy" . | nindent 2 }}
 ---
+{{- end }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: toni
-  namespace: argocd
+  namespace: {{ .Release.Namespace }}
 spec:
   project: default
   source:
