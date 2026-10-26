@@ -87,10 +87,19 @@ jobs:
         env:
           TAG: ${{ needs.images.outputs.tag }}
           REGISTRY: ${{ needs.images.outputs.registry }}
+        # Always starts from the newest main and re-applies the values, so a push
+        # that lands meanwhile can never cause a merge conflict.
         run: |
-          yq -i '.images[] |= (.newTag = strenv(TAG) | .newName = strenv(REGISTRY) + "/" + .name)' deploy/toni/kustomization.yaml
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -am "deploy: toni $TAG" || exit 0
-          git pull --rebase
-          git push
+          for attempt in 1 2 3 4 5; do
+            git fetch -q origin main
+            git reset -q --hard origin/main
+            yq -i '.images[] |= (.newTag = strenv(TAG) | .newName = strenv(REGISTRY) + "/" + .name)' deploy/toni/kustomization.yaml
+            git diff --quiet && { echo "Schon aktuell"; exit 0; }
+            git commit -qam "deploy: toni $TAG"
+            git push -q origin HEAD:main && { echo "Deployt: $TAG"; exit 0; }
+            echo "Push fehlgeschlagen (Versuch $attempt), neuer Anlauf …"
+            sleep 5
+          done
+          exit 1
