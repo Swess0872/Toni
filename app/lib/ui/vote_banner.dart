@@ -141,7 +141,7 @@ class VoteBanner extends StatelessWidget {
                       variant: myVote == 'nein' ? BtnVariant.neinOn : BtnVariant.nein,
                       icon: Ic.close,
                       full: true,
-                      onPressed: () => cast('nein'),
+                      onPressed: store.offline ? null : () => cast('nein'),
                       child: const Text('Freispruch'),
                     ),
                   ),
@@ -151,7 +151,7 @@ class VoteBanner extends StatelessWidget {
                       variant: myVote == 'ja' ? BtnVariant.jaOn : BtnVariant.ja,
                       icon: Ic.bolt,
                       full: true,
-                      onPressed: () => cast('ja'),
+                      onPressed: store.offline ? null : () => cast('ja'),
                       child: const Text('Strich!'),
                     ),
                   ),
@@ -159,7 +159,7 @@ class VoteBanner extends StatelessWidget {
                 const SizedBox(height: 10),
                 DashedButton(
                   full: true,
-                  onPressed: voted == 0 ? null : () => guarded(context, () => store.resolveVote(vote.id)),
+                  onPressed: voted == 0 || store.offline ? null : () => guarded(context, () => store.resolveVote(vote.id)),
                   child: const Text('Abstimmung auswerten →'),
                 ),
               ] else

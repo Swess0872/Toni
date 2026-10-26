@@ -13,9 +13,13 @@ String apiBaseUrl() {
 }
 
 class ApiException implements Exception {
-  ApiException(this.message, [this.status = 0]);
+  ApiException(this.message, [this.status = 0]) : offline = false;
+  ApiException.offline() : message = 'Keine Verbindung zum Server.', status = 0, offline = true;
+
   final String message;
   final int status;
+  /// The server could not be reached at all (no network, server down).
+  final bool offline;
 
   bool get unauthorized => status == 401;
 
@@ -51,7 +55,7 @@ class ApiClient {
     try {
       res = await http.Response.fromStream(await _http.send(req));
     } catch (_) {
-      throw ApiException('Keine Verbindung zum Server.');
+      throw ApiException.offline();
     }
 
     final text = utf8.decode(res.bodyBytes);

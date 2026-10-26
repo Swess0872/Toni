@@ -49,11 +49,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ]),
         ),
       ),
-      switch (_tab) {
-        'perioden' => const _PeriodsAdmin(),
-        'aktionen' => const _ActionsAdmin(),
-        _ => const _PeopleAdmin(),
-      },
+      ReadOnly(
+        readOnly: context.watch<ToniStore>().offline,
+        child: switch (_tab) {
+          'perioden' => const _PeriodsAdmin(),
+          'aktionen' => const _ActionsAdmin(),
+          _ => const _PeopleAdmin(),
+        },
+      ),
     ]);
   }
 }

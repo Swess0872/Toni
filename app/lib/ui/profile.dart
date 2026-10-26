@@ -85,7 +85,7 @@ class _ProfileFormState extends State<ProfileForm> {
       if (_msg != null) setState(() => _msg = null);
     }
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    return ReadOnly(readOnly: store.offline, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
         person != null
             ? Avatar(person: person, size: 72)
@@ -179,7 +179,7 @@ class _ProfileFormState extends State<ProfileForm> {
           ]),
         ),
       ),
-    ]);
+    ]));
   }
 }
 

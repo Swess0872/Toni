@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:signalr_netcore/iretry_policy.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 
 import 'api.dart';
@@ -10,10 +12,14 @@ import 'selectors.dart';
 
 /// App-wide data and session. Every action goes to the server and then reloads
 /// the state; the server also pushes "changed" via SignalR so other screens follow.
+///
+/// The last loaded state is kept on the device. Without a connection the app
+/// shows that copy read-only and reconnects on its own once the server is back.
 class ToniStore extends ChangeNotifier {
   ToniStore(this.api, this._prefs);
 
   static const _sessionKey = 'toni_session_v1';
+  static const _cacheKey = 'toni_cache_v1';
 
   final ApiClient api;
   final SharedPreferences _prefs;
@@ -23,7 +29,13 @@ class ToniStore extends ChangeNotifier {
   List<AppUser> users = [];
   List<DemoLogin> demoLogins = [];
   bool loaded = false;
+  /// Error from the last reload that is not a lost connection (e.g. server error).
   String? connectionError;
+  /// No connection to the server: data is the cached copy and changes are blocked.
+  bool offline = false;
+  /// When [data] was last loaded from the server.
+  DateTime? dataAsOf;
+  DateTime _lastReload = DateTime(0);
 
   Selectors? _sel;
   Selectors get sel => _sel ??= Selectors(data);
@@ -38,9 +50,36 @@ class ToniStore extends ChangeNotifier {
 
   Future<void> init() async {
     api.token = _prefs.getString(_sessionKey);
+    _loadCache();
     await Future.wait([_loadConfig(), _loadMe()]);
     await refresh();
     _startLive();
+  }
+
+  void _loadCache() {
+    final raw = _prefs.getString(_cacheKey);
+    if (raw == null) return;
+    try {
+      final j = jsonDecode(raw) as Map<String, dynamic>;
+      data = ToniData.fromJson(j['state'] as Map<String, dynamic>);
+      dataAsOf = DateTime.parse(j['savedAt'] as String);
+      // Only restore the session's user if the session itself is still there.
+      if (api.token != null && j['user'] != null) user = AppUser.fromJson(j['user'] as Map<String, dynamic>);
+      users = [for (final u in j['users'] as List? ?? const []) AppUser.fromJson(u as Map<String, dynamic>)];
+      loaded = true;
+      notifyListeners();
+    } catch (_) {
+      _prefs.remove(_cacheKey);
+    }
+  }
+
+  void _saveCache(Map<String, dynamic> state, List<dynamic>? rawUsers) {
+    _prefs.setString(_cacheKey, jsonEncode({
+      'state': state,
+      'savedAt': dataAsOf!.toIso8601String(),
+      'user': user == null ? null : {'id': user!.id, 'username': user!.username, 'role': user!.role, 'personId': user!.personId},
+      'users': ?rawUsers,
+    }));
   }
 
   Future<void> _loadConfig() async {
@@ -68,15 +107,26 @@ class ToniStore extends ChangeNotifier {
   Future<void> refresh() => _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
 
   Future<void> _doRefresh() async {
+    _lastReload = DateTime.now();
     try {
-      data = ToniData.fromJson(await api.get('/state') as Map<String, dynamic>);
-      if (isAdmin) {
-        users = [for (final u in await api.get('/users') as List) AppUser.fromJson(u as Map<String, dynamic>)];
-      }
+      final state = await api.get('/state') as Map<String, dynamic>;
+      final rawUsers = isAdmin ? await api.get('/users') as List : null;
+      data = ToniData.fromJson(state);
+      if (rawUsers != null) users = [for (final u in rawUsers) AppUser.fromJson(u as Map<String, dynamic>)];
+      dataAsOf = DateTime.now();
+      _saveCache(state, rawUsers);
       connectionError = null;
+      final wasOffline = offline;
+      offline = false;
+      if (wasOffline) {
+        // Back online: catch up on everything that may have changed meanwhile.
+        await Future.wait([_loadConfig(), _loadMe()]);
+      }
+      _ensureHub();
     } on ApiException catch (e) {
       if (e.unauthorized) await _clearSession();
-      connectionError = e.message;
+      offline = e.offline;
+      connectionError = e.offline ? null : e.message;
     }
     _sel = null;
     loaded = true;
@@ -84,10 +134,23 @@ class ToniStore extends ChangeNotifier {
   }
 
   void _startLive() {
-    _poll = Timer.periodic(const Duration(seconds: 30), (_) => refresh());
-    final hub = HubConnectionBuilder().withUrl('${api.baseUrl}/hubs/state').withAutomaticReconnect().build();
+    // Every 10 s while offline (to notice the way back), otherwise every 30 s as a safety net.
+    _poll = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (offline || DateTime.now().difference(_lastReload) >= const Duration(seconds: 30)) refresh();
+    });
+    final hub = HubConnectionBuilder()
+        .withUrl('${api.baseUrl}/hubs/state')
+        .withAutomaticReconnect(reconnectPolicy: _RetryForever())
+        .build();
     hub.on('changed', (_) => refresh());
     _hub = hub;
+    _ensureHub();
+  }
+
+  /// Starts the live connection if it is down (first start failed or it gave up).
+  void _ensureHub() {
+    final hub = _hub;
+    if (hub == null || hub.state != HubConnectionState.Disconnected) return;
     hub.start()?.catchError((Object _) {});
   }
 
@@ -121,9 +184,12 @@ class ToniStore extends ChangeNotifier {
   }
 
   Future<void> _do(Future<dynamic> Function() call) async {
+    if (offline) throw ApiException(offlineMessage);
     await call();
     await refresh();
   }
+
+  static const offlineMessage = 'Offline — Änderungen sind erst wieder mit Verbindung möglich.';
 
   // ---- Striche & Abstimmungen ----------------------------------------------
 
@@ -146,7 +212,10 @@ class ToniStore extends ChangeNotifier {
 
   Future<void> setMyAvatar(String? dataUrl) => _do(() => api.put('/me/avatar', {'avatar': dataUrl}));
 
-  Future<void> changeMyPassword(String password) => api.put('/me/password', {'password': password});
+  Future<void> changeMyPassword(String password) async {
+    if (offline) throw ApiException(offlineMessage);
+    await api.put('/me/password', {'password': password});
+  }
 
   // ---- Admin: Personen & Logins --------------------------------------------
 
@@ -196,4 +265,12 @@ class ToniStore extends ChangeNotifier {
       _do(() => api.patch('/periods/$id', {'start': ?start, 'end': ?end}));
 
   Future<void> removePeriod(String id) => _do(() => api.delete('/periods/$id'));
+}
+
+/// Reconnect quickly at first, then every 30 seconds — and never give up.
+class _RetryForever implements IRetryPolicy {
+  @override
+  int? nextRetryDelayInMilliseconds(RetryContext retryContext) =>
+      const [0, 2000, 5000, 10000][retryContext.previousRetryCount.clamp(0, 3)] +
+      (retryContext.previousRetryCount > 3 ? 20000 : 0);
 }

@@ -140,7 +140,8 @@ class _ShellState extends State<Shell> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: tv ? double.infinity : maxContentWidth),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  if (store.connectionError != null) _OfflineBanner(message: store.connectionError!),
+                  if (store.offline) _OfflineBanner(asOf: store.dataAsOf),
+                  if (store.connectionError != null) _ErrorBanner(message: store.connectionError!),
                   page,
                 ]),
               ),
@@ -148,7 +149,7 @@ class _ShellState extends State<Shell> {
           ),
         ),
       ),
-      floatingActionButton: _route == AppRoute.overview && store.isLoggedIn && !tv ? _Fab(onTap: _add) : null,
+      floatingActionButton: _route == AppRoute.overview && store.isLoggedIn && !store.offline && !tv ? _Fab(onTap: _add) : null,
     );
 
     if (!tv) return scaffold;
@@ -263,7 +264,7 @@ class _Header extends StatelessWidget {
                       Btn(
                         size: BtnSize.sm,
                         icon: Ic.plus,
-                        onPressed: onAdd,
+                        onPressed: store.offline ? null : onAdd,
                         child: narrow ? null : const Text('Strich'),
                       ),
                       SizedBox(width: narrow ? 6 : 14),
@@ -391,8 +392,8 @@ class _Gate extends StatelessWidget {
   }
 }
 
-class _OfflineBanner extends StatelessWidget {
-  const _OfflineBanner({required this.message});
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
 
   final String message;
 
@@ -405,5 +406,50 @@ class _OfflineBanner extends StatelessWidget {
       decoration: BoxDecoration(color: ToniTheme.nein.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(10)),
       child: Text(message, textAlign: TextAlign.center, style: t.body(size: 13, weight: FontWeight.w600, color: t.neinText)),
     );
+  }
+}
+
+/// Shown while the server is unreachable: what you see is the last saved copy.
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner({required this.asOf});
+
+  final DateTime? asOf;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.t;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: t.amber.withValues(alpha: 0.14),
+        border: Border.all(color: t.amber.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(children: [
+        Icon(Icons.cloud_off_rounded, size: 20, color: t.amberText),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Offline — nur Ansicht', style: t.head(size: 14, color: t.amberText)),
+            const SizedBox(height: 2),
+            Text(
+              asOf == null
+                  ? 'Noch keine gespeicherten Daten. Toni verbindet sich automatisch, sobald das Netz zurück ist.'
+                  : 'Stand von ${_formatAsOf(asOf!)}. Toni verbindet sich automatisch, sobald das Netz zurück ist.',
+              style: t.body(size: 12.5, color: t.dim, height: 1.4),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  static String _formatAsOf(DateTime d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    final now = DateTime.now();
+    final time = '${two(d.hour)}:${two(d.minute)}';
+    final sameDay = d.year == now.year && d.month == now.month && d.day == now.day;
+    return sameDay ? 'heute $time' : '${two(d.day)}.${two(d.month)}. $time';
   }
 }

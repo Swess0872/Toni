@@ -76,7 +76,7 @@ class _AddStrikeFormState extends State<AddStrikeForm> {
     final store = context.watch<ToniStore>();
     final opts = _options(store);
     if (_periodId == null || !opts.any((p) => p.id == _periodId)) _periodId = opts.isEmpty ? null : opts.first.id;
-    final valid = _personId != null && _periodId != null && _reason.text.trim().length > 2 && !_busy;
+    final valid = _personId != null && _periodId != null && _reason.text.trim().length > 2 && !_busy && !store.offline;
     final phone = formFactorOf(context) == FormFactor.phone;
 
     if (_flash != null) return _Flash(vote: _flash == 'abstimmung');

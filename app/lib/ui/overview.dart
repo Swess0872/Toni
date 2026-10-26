@@ -99,18 +99,21 @@ class WideBoard extends StatefulWidget {
 }
 
 class _WideBoardState extends State<WideBoard> {
+  static const _interval = Duration(seconds: 6);
+  /// How long the rotation waits after someone touched, moved the mouse or used the remote here.
+  static const _pauseAfterInteraction = Duration(seconds: 12);
+
   int _idx = 0;
-  bool _hovered = false;
-  bool _focused = false;
-  DateTime _touchedUntil = DateTime(0);
+  DateTime _pausedUntil = DateTime(0);
   Timer? _timer;
+
+  void _interacted() => _pausedUntil = DateTime.now().add(_pauseAfterInteraction);
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 6), (_) {
-      final paused = _hovered || _focused || DateTime.now().isBefore(_touchedUntil) || reducedMotion(context);
-      if (!paused && mounted) setState(() => _idx = (_idx + 1) % 2);
+    _timer = Timer.periodic(_interval, (_) {
+      if (mounted && DateTime.now().isAfter(_pausedUntil)) setState(() => _idx = (_idx + 1) % 2);
     });
   }
 
@@ -133,14 +136,17 @@ class _WideBoardState extends State<WideBoard> {
     void pick(Person p) => showPersonDetail(context, p, v.scope);
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onHover: (_) => _interacted(),
       child: Focus(
         canRequestFocus: false,
         skipTraversal: true,
-        onFocusChange: (f) => _focused = f,
+        onFocusChange: (_) => _interacted(),
+        onKeyEvent: (_, _) {
+          _interacted();
+          return KeyEventResult.ignored;
+        },
         child: Listener(
-          onPointerDown: (_) => _touchedUntil = DateTime.now().add(const Duration(seconds: 12)),
+          onPointerDown: (_) => _interacted(),
           child: Panel(
             child: Column(children: [
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -173,7 +179,8 @@ class _WideBoardState extends State<WideBoard> {
               ]),
               const SizedBox(height: 14),
               AnimatedSwitcher(
-                duration: const Duration(milliseconds: 450),
+                // Still rotates with "reduce motion", just without the slide.
+                duration: reducedMotion(context) ? Duration.zero : const Duration(milliseconds: 450),
                 switchInCurve: const Cubic(.2, .9, .25, 1),
                 transitionBuilder: (child, anim) => FadeTransition(
                   opacity: anim,

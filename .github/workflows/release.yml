@@ -90,7 +90,7 @@ jobs:
         run: |
           yq -i '.images[] |= (.newTag = strenv(TAG) | .newName = strenv(REGISTRY) + "/" + .name)' deploy/toni/kustomization.yaml
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -am "deploy: toni $TAG" || exit 0
           git pull --rebase
           git push

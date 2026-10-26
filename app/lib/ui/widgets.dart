@@ -527,6 +527,23 @@ class Seg<T> extends StatelessWidget {
   }
 }
 
+/// Greys out [child] and blocks taps and focus while [readOnly] (offline).
+class ReadOnly extends StatelessWidget {
+  const ReadOnly({super.key, required this.readOnly, required this.child});
+
+  final bool readOnly;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        ignoring: readOnly,
+        child: ExcludeFocus(
+          excluding: readOnly,
+          child: AnimatedOpacity(opacity: readOnly ? 0.55 : 1, duration: const Duration(milliseconds: 200), child: child),
+        ),
+      );
+}
+
 /// Shows at most [limit] items; the rest sit behind a "Mehr anzeigen" button.
 class ShowMore extends StatefulWidget {
   const ShowMore({super.key, required this.total, required this.builder, this.limit = 10});
