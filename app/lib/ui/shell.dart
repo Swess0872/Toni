@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../core/store.dart';
@@ -27,6 +29,43 @@ class Shell extends StatefulWidget {
 class _ShellState extends State<Shell> {
   AppRoute _route = AppRoute.overview;
 
+  // TV: the header hides after a few seconds without input and comes back on any key or pointer.
+  static const _tvHeaderTimeout = Duration(seconds: 4);
+  bool _headerShown = true;
+  Timer? _hideTimer;
+  final _headerFocus = FocusNode(skipTraversal: true, canRequestFocus: false);
+
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    _hideTimer?.cancel();
+    _headerFocus.dispose();
+    super.dispose();
+  }
+
+  bool _onKey(KeyEvent _) {
+    _showHeader();
+    return false;
+  }
+
+  void _showHeader() {
+    if (!context.t.tv) return;
+    if (!_headerShown) setState(() => _headerShown = true);
+    _hideTimer?.cancel();
+    _hideTimer = Timer(_tvHeaderTimeout, () {
+      if (!mounted) return;
+      // Keep it while the remote's focus is inside the header.
+      if (_headerFocus.hasFocus) return _showHeader();
+      setState(() => _headerShown = false);
+    });
+  }
+
   void _requireLogin([String? reason]) => showLogin(context, reason: reason ?? 'Bitte melde dich an, um fortzufahren.');
 
   void _add() {
@@ -43,6 +82,9 @@ class _ShellState extends State<Shell> {
     final store = context.watch<ToniStore>();
     final ff = formFactorOf(context);
     final headerHeight = 62.0 + MediaQuery.paddingOf(context).top;
+    final tv = ff == FormFactor.tv;
+    final headerVisible = !tv || _headerShown;
+    if (tv && _hideTimer == null) WidgetsBinding.instance.addPostFrameCallback((_) => _showHeader());
 
     final Widget page;
     if (!store.loaded) {
@@ -53,15 +95,23 @@ class _ShellState extends State<Shell> {
       page = Overview(onRequireLogin: () => _requireLogin('Nur angemeldete Mitglieder können abstimmen.'));
     }
 
-    return Scaffold(
+    final scaffold = Scaffold(
       extendBodyBehindAppBar: true,
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(headerHeight),
-        child: _Header(
-          route: _route,
-          onRoute: (r) => setState(() => _route = r),
-          onAdd: _add,
-          onLogin: () => showLogin(context),
+        child: AnimatedSlide(
+          offset: headerVisible ? Offset.zero : const Offset(0, -1),
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          child: Focus(
+            focusNode: _headerFocus,
+            child: _Header(
+              route: _route,
+              onRoute: (r) => setState(() => _route = r),
+              onAdd: _add,
+              onLogin: () => showLogin(context),
+            ),
+          ),
         ),
       ),
       body: DecoratedBox(
@@ -76,12 +126,19 @@ class _ShellState extends State<Shell> {
         child: RefreshIndicator(
           onRefresh: store.refresh,
           edgeOffset: headerHeight,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(t.pad, headerHeight + t.pad, t.pad, 120 + MediaQuery.paddingOf(context).bottom),
+          // Content moves up into the space of the hidden TV header.
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(end: headerVisible ? headerHeight : 0),
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            builder: (context, top, child) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(t.pad, top + t.pad, t.pad, (tv ? t.pad : 120) + MediaQuery.paddingOf(context).bottom),
+              child: child,
+            ),
             child: Center(
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: ff == FormFactor.tv ? double.infinity : maxContentWidth),
+                constraints: BoxConstraints(maxWidth: tv ? double.infinity : maxContentWidth),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   if (store.connectionError != null) _OfflineBanner(message: store.connectionError!),
                   page,
@@ -91,7 +148,14 @@ class _ShellState extends State<Shell> {
           ),
         ),
       ),
-      floatingActionButton: _route == AppRoute.overview && store.isLoggedIn && ff != FormFactor.tv ? _Fab(onTap: _add) : null,
+      floatingActionButton: _route == AppRoute.overview && store.isLoggedIn && !tv ? _Fab(onTap: _add) : null,
+    );
+
+    if (!tv) return scaffold;
+    return Listener(
+      onPointerHover: (_) => _showHeader(),
+      onPointerDown: (_) => _showHeader(),
+      child: scaffold,
     );
   }
 }

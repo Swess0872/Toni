@@ -68,14 +68,14 @@ class Selectors {
     for (final s in data.strikes.where(inScope)) {
       counts[s.personId] = (counts[s.personId] ?? 0) + 1;
     }
-    return _sorted(activePeople.map((p) => Ranked(p, counts[p.id] ?? 0)));
+    return _sorted(data.people.map((p) => Ranked(p, counts[p.id] ?? 0)));
   }
 
   final Map<String, List<String>> _winners = {};
 
   /// Person(s) with the most (> 0) strikes in a period; ties give several winners.
   List<String> periodWinners(String periodId) => _winners.putIfAbsent(periodId, () {
-        final counts = <String, int>{for (final p in activePeople) p.id: 0};
+        final counts = <String, int>{for (final p in data.people) p.id: 0};
         for (final s in data.strikes) {
           if (s.periodId == periodId && counts.containsKey(s.personId)) counts[s.personId] = counts[s.personId]! + 1;
         }
@@ -90,7 +90,7 @@ class Selectors {
         wins[pid] = (wins[pid] ?? 0) + 1;
       }
     }
-    return _sorted(activePeople.map((p) => Ranked(p, wins[p.id] ?? 0)));
+    return _sorted(data.people.map((p) => Ranked(p, wins[p.id] ?? 0)));
   }
 
   /// Monthly (and occasion) wins per person in a year — the "Jahr" board.
@@ -112,7 +112,7 @@ class Selectors {
         titles[pid] = (titles[pid] ?? 0) + 1;
       }
     }
-    return _sorted(activePeople.map((p) => Ranked(p, titles[p.id] ?? 0)));
+    return _sorted(data.people.map((p) => Ranked(p, titles[p.id] ?? 0)));
   }
 
   int monthsWon(String personId, int year) =>

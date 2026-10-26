@@ -148,7 +148,6 @@ class _ProfileFormState extends State<ProfileForm> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Field(
               label: 'Passwort ändern',
-              hint: 'auch ohne Admin-Rechte',
               child: TextField(
                 controller: _pw,
                 obscureText: true,

@@ -42,15 +42,6 @@ class Overview extends StatelessWidget {
         ),
     ];
 
-    final hint = Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: Text(
-        'Tipp: Auf einen Namen tippen zeigt, woraus sich die Striche zusammensetzen.',
-        textAlign: TextAlign.center,
-        style: context.t.mono(size: 12.5, color: context.t.dim2),
-      ),
-    );
-
     if (ff == FormFactor.tv) {
       // Wall display: live votes / podium on the left, all live rankings on the right.
       return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -63,7 +54,6 @@ class Overview extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       top,
       _Grid(columns: ff == FormFactor.desktop ? 3 : 1, children: lists),
-      hint,
     ]);
   }
 }
@@ -191,10 +181,15 @@ class _WideBoardState extends State<WideBoard> {
                 ),
                 child: Column(key: ValueKey(v.key), children: [
                   Podium(rows: v.rows, onPick: pick),
+                  // Podium shows 3, the chips the next 7 — 10 people before "Mehr anzeigen".
                   if (v.rows.length > 3)
-                    Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 8, children: [
-                      for (var i = 3; i < v.rows.length; i++) _RestChip(rank: i + 1, row: v.rows[i], onTap: () => pick(v.rows[i].person)),
-                    ]),
+                    ShowMore(
+                      total: v.rows.length - 3,
+                      limit: 7,
+                      builder: (context, visible) => Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 8, children: [
+                        for (var i = 3; i < 3 + visible; i++) _RestChip(rank: i + 1, row: v.rows[i], onTap: () => pick(v.rows[i].person)),
+                      ]),
+                    ),
                 ]),
               ),
             ]),
@@ -372,11 +367,16 @@ class RankList extends StatelessWidget {
           ]),
         ]),
         const SizedBox(height: 14),
-        for (var i = 0; i < rows.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: _RankRow(rank: i + 1, row: rows[i], max: max, crown: i == 0, onTap: () => showPersonDetail(context, rows[i].person, scope)),
-          ),
+        ShowMore(
+          total: rows.length,
+          builder: (context, visible) => Column(children: [
+            for (var i = 0; i < visible; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: _RankRow(rank: i + 1, row: rows[i], max: max, crown: i == 0, onTap: () => showPersonDetail(context, rows[i].person, scope)),
+              ),
+          ]),
+        ),
       ]),
     );
   }

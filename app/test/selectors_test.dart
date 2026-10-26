@@ -70,6 +70,17 @@ void main() {
       expect(rows.map((r) => r.count), [2, 1, 0]);
     });
 
+    test('deactivated people stay in rankings but cannot be picked', () {
+      final off = Person(id: 'off', name: 'off', active: false, color: '#a3e635');
+      final s = Selectors(
+        ToniData(people: [a, off], periods: data.periods, strikes: [strike('off', 'jan'), strike('off', 'jan')]),
+        now: DateTime(2026, 10, 26),
+      );
+      expect(s.leaderboard(const PeriodScope('jan')).first.person.id, 'off');
+      expect(s.periodWinners('jan'), ['off']);
+      expect(s.activePeople.map((p) => p.id), ['a']);
+    });
+
     test('breakdown groups newest period first', () {
       expect(sel.breakdownByPeriod('a').map((g) => g.$1?.id), ['okt26', 'feb', 'jan']);
     });

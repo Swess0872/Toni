@@ -105,13 +105,17 @@ class _AddStrikeFormState extends State<AddStrikeForm> {
         1,
         Field(
           label: 'Wer hat Mist gebaut?',
-          child: LayoutBuilder(builder: (context, c) {
-            final cols = ((c.maxWidth + 8) / (96 + 8)).floor().clamp(1, 6);
-            final w = (c.maxWidth - 8 * (cols - 1)) / cols;
-            return Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final p in store.sel.activePeople) SizedBox(width: w, child: _NameChip(person: p, on: _personId == p.id, onTap: () => setState(() => _personId = p.id))),
-            ]);
-          }),
+          child: ShowMore(
+            total: store.sel.activePeople.length,
+            builder: (context, visible) => LayoutBuilder(builder: (context, c) {
+              final cols = ((c.maxWidth + 8) / (96 + 8)).floor().clamp(1, 6);
+              final w = (c.maxWidth - 8 * (cols - 1)) / cols;
+              return Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final p in store.sel.activePeople.take(visible))
+                  SizedBox(width: w, child: _NameChip(person: p, on: _personId == p.id, onTap: () => setState(() => _personId = p.id))),
+              ]);
+            }),
+          ),
         ),
       ),
       step(
@@ -156,7 +160,7 @@ class _AddStrikeFormState extends State<AddStrikeForm> {
               maxLines: 5,
               maxLength: 140,
               style: t.body(size: 15),
-              decoration: const InputDecoration(hintText: 'z.B. Hat den Abwasch 5 Tage stehen lassen…', counterText: ''),
+              decoration: const InputDecoration(counterText: ''),
             ),
             Padding(
               padding: const EdgeInsets.only(top: 4),

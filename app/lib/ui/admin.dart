@@ -202,9 +202,13 @@ class _PeopleAdminState extends State<_PeopleAdmin> {
         const SizedBox(width: 7),
         Btn(size: BtnSize.sm, icon: Ic.plus, onPressed: _add, child: const Text('Person')),
       ]),
-      child: Column(children: [
-        for (final p in store.data.people) Padding(padding: const EdgeInsets.only(bottom: 11), child: _PersonCard(key: ValueKey(p.id), person: p)),
-      ]),
+      child: ShowMore(
+        total: store.data.people.length,
+        builder: (context, visible) => Column(children: [
+          for (final p in store.data.people.take(visible))
+            Padding(padding: const EdgeInsets.only(bottom: 11), child: _PersonCard(key: ValueKey(p.id), person: p)),
+        ]),
+      ),
     );
   }
 }
@@ -346,7 +350,6 @@ class _LoginRow extends StatefulWidget {
 
 class _LoginRowState extends State<_LoginRow> {
   final _pw = TextEditingController();
-  bool _show = false;
 
   @override
   void dispose() {
@@ -391,12 +394,11 @@ class _LoginRowState extends State<_LoginRow> {
             width: 130,
             child: TextField(
               controller: _pw,
-              obscureText: !_show,
+              obscureText: true,
               style: t.mono(size: 14, color: t.text),
               decoration: const InputDecoration(hintText: '••••', contentPadding: EdgeInsets.symmetric(horizontal: 11, vertical: 10)),
             ),
           ),
-          IconBtn(icon: _show ? Ic.eyeOff : Ic.eye, small: true, tooltip: 'Anzeigen', onPressed: () => setState(() => _show = !_show)),
           IconBtn(
             icon: Ic.check,
             small: true,

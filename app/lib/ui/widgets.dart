@@ -527,6 +527,62 @@ class Seg<T> extends StatelessWidget {
   }
 }
 
+/// Shows at most [limit] items; the rest sit behind a "Mehr anzeigen" button.
+class ShowMore extends StatefulWidget {
+  const ShowMore({super.key, required this.total, required this.builder, this.limit = 10});
+
+  final int total;
+  final int limit;
+  /// Builds the list with the first [visible] items.
+  final Widget Function(BuildContext context, int visible) builder;
+
+  @override
+  State<ShowMore> createState() => _ShowMoreState();
+}
+
+class _ShowMoreState extends State<ShowMore> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.t;
+    final hidden = widget.total - widget.limit;
+    final visible = _expanded || hidden <= 0 ? widget.total : widget.limit;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      widget.builder(context, visible),
+      if (hidden > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Center(
+            child: Hoverable(
+              onTap: () => setState(() => _expanded = !_expanded),
+              builder: (context, hovered) => Container(
+                constraints: const BoxConstraints(minHeight: 40),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: hovered ? t.bg2 : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text(
+                    _expanded ? 'Weniger anzeigen' : 'Mehr anzeigen (+$hidden)',
+                    style: t.head(size: 13, weight: FontWeight.w600, color: hovered ? t.text : t.dim),
+                  ),
+                  const SizedBox(width: 4),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 150),
+                    child: Icon(Ic.chevron, size: 18, color: hovered ? t.text : t.dim),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
+    ]);
+  }
+}
+
 /// Dashed rounded border (CSS `border: 1px dashed`).
 class DashedBorder extends StatelessWidget {
   const DashedBorder({super.key, required this.child, required this.color, this.radius = 10});
