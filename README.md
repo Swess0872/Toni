@@ -6,7 +6,7 @@ Eine Gruppen-Strichliste: Wer Mist baut, bekommt einen Strich. Wer pro Monat die
 |---|---|---|
 | Apps (iOS, Android, Web/PWA, TV-Browser) | Flutter | [app/](app/) |
 | Server | ASP.NET Core (.NET 10), PostgreSQL, SignalR | [api/](api/) |
-| Kubernetes | Helm + Argo CD (GitOps) | [deploy/](deploy/) |
+| Kubernetes | Kubernetes-YAML + Argo CD (GitOps) | [deploy/](deploy/) |
 | Pipelines | GitHub Actions + Fastlane | [.github/workflows/](.github/workflows/) |
 | Design-Vorgabe | HTML-Prototyp + Spezifikation | [Toni_design/](Toni_design/) |
 
@@ -45,42 +45,57 @@ ConnectionStrings__Default="Host=localhost;Database=toni;Username=toni;Password=
 
 ## Wie der Code in den Cluster kommt
 
-```
+```text
 git push main ──► GitHub Actions: Tests → Images nach ghcr.io/<owner>/toni-api|toni-web
-                                     └─► Commit: neuer Image-Tag in deploy/charts/toni/values.yaml
+                                     └─► Commit: neue Image-Version in deploy/toni/kustomization.yaml
 Argo CD (im Cluster) ◄── sieht den Commit ──► rollt die neue Version aus
 ```
 
+### Was in `deploy/` liegt
+
+| Datei | Wofür |
+|---|---|
+| [deploy/toni/kustomization.yaml](deploy/toni/kustomization.yaml) | Liste aller Toni-Dateien + welche Image-Version läuft |
+| [deploy/toni/postgres.yaml](deploy/toni/postgres.yaml) | Datenbank mit 2-GB-Volume |
+| [deploy/toni/api.yaml](deploy/toni/api.yaml) | C#-Server |
+| [deploy/toni/web.yaml](deploy/toni/web.yaml) | Web-App (nginx) |
+| [deploy/toni/ingress.yaml](deploy/toni/ingress.yaml) | Adresse `toni.techstein.ch` + HTTPS-Zertifikat |
+| [deploy/argocd/toni.yaml](deploy/argocd/toni.yaml) | Sagt Argo CD, dass es `deploy/toni` installieren soll |
+| [deploy/argocd/cert-manager.yaml](deploy/argocd/cert-manager.yaml) | *Optional*, falls cert-manager fehlt |
+| [deploy/argocd/traefik.yaml](deploy/argocd/traefik.yaml) | *Optional*, falls noch kein Ingress-Controller läuft |
+
 ### Cluster einmalig einrichten
 
-Voraussetzungen:
+Voraussetzungen: Argo CD läuft. Der DNS-Eintrag `toni.techstein.ch` zeigt auf die IP des Clusters, und die Ports 80/443 sind von außen erreichbar (Let's Encrypt prüft über Port 80).
 
-- `kubectl` zeigt auf den Cluster.
-- Der DNS-Eintrag `toni.techstein.ch` zeigt auf die öffentliche IP des Clusters.
-- Die Ports **80 und 443** sind von außen erreichbar, ggf. per Port-Weiterleitung im Router. Let's Encrypt prüft über Port 80.
-- Es gibt eine Default-StorageClass für die Postgres-Daten (`kubectl get storageclass`). Sonst `database.storageClass` in [deploy/charts/toni/values.yaml](deploy/charts/toni/values.yaml) setzen.
-
-Traefik lauscht direkt auf Port 80/443 der Nodes (`traefik.hostPorts: true` in [deploy/platform/values.yaml](deploy/platform/values.yaml)), weil ein selbst gehosteter Cluster meist keinen LoadBalancer hat.
+**1. Fehlt etwas?** cert-manager und einen Ingress-Controller braucht Toni. Nur anwenden, was fehlt:
 
 ```bash
-REPO_URL=https://github.com/<owner>/<repo> \
-ACME_EMAIL=<deine-mail> \
-./deploy/bootstrap/install.sh
+kubectl get crd certificates.cert-manager.io || kubectl apply -f deploy/argocd/cert-manager.yaml
+kubectl get ingressclass                     # leer? → kubectl apply -f deploy/argocd/traefik.yaml
 ```
 
-Das Skript installiert Argo CD (falls noch nicht vorhanden), legt die Secrets an (JWT-Schlüssel, erster Admin-Login) und erstellt die Root-Application `toni-root`. Was schon im Cluster läuft (Argo CD, Traefik, cert-manager, CloudNativePG), wird erkannt und nicht angefasst. Läuft Argo CD in einem anderen Namespace als `argocd`, setze `ARGOCD_NAMESPACE=<ns>`.
+**2. Geheimnisse anlegen.** Sie gehören nicht ins Git, darum von Hand:
 
-Ab dann installiert Argo CD alles Weitere aus [deploy/platform/](deploy/platform/):
+```bash
+kubectl create namespace toni
+kubectl -n toni create secret generic toni-secrets \
+  --from-literal=dbPassword="$(openssl rand -hex 16)" \
+  --from-literal=jwtKey="$(openssl rand -hex 32)" \
+  --from-literal=adminPassword="<dein-admin-passwort>"
+```
 
-- **Traefik** (Ingress; wird übersprungen, wenn schon eines läuft, z.B. bei k3s)
-- **cert-manager** + Let's-Encrypt-Issuer
-- **CloudNativePG** (Postgres-Operator) und die Toni-Datenbank
-- **Toni** (API + Web) aus [deploy/charts/toni/](deploy/charts/toni/)
-- **Argo CD selbst**: Updates laufen über [deploy/argocd/kustomization.yaml](deploy/argocd/kustomization.yaml). Gilt nur, wenn das Skript Argo CD installiert hat; ein schon vorhandenes Argo CD bleibt, wie es ist.
+Mit `admin` und diesem Passwort meldest du dich in Toni zum ersten Mal an.
 
-Für ein **privates Repo** zusätzlich `GITHUB_TOKEN=<PAT mit repo + read:packages>` mitgeben.
+**3. Toni bei Argo CD anmelden.** In [deploy/argocd/toni.yaml](deploy/argocd/toni.yaml) `OWNER` durch deinen GitHub-Namen ersetzen, dann:
 
-Status: `kubectl -n argocd get applications`
+```bash
+kubectl apply -f deploy/argocd/toni.yaml
+```
+
+Status: `kubectl -n argocd get application toni`. Ab jetzt geht jeder Push auf `main` automatisch live.
+
+> **Hinweis:** GHCR legt neue Images als *privat* an, auch bei öffentlichem Repo. Nach dem ersten Release auf GitHub unter *Packages* `toni-api` und `toni-web` auf **Public** stellen.
 
 ## Store-Releases
 

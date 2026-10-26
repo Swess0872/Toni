@@ -1,5 +1,0 @@
-apiVersion: v2
-name: toni-platform
-description: App of Apps — everything Argo CD installs into the cluster
-type: application
-version: 0.1.0

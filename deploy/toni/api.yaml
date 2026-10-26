@@ -1,0 +1,42 @@
+# Der C#-Server (ASP.NET Core). Legt beim ersten Start die Tabellen
+# und den ersten Admin-Login an.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  selector:
+    matchLabels: { app: api }
+  template:
+    metadata:
+      labels: { app: api }
+    spec:
+      containers:
+        - name: api
+          image: toni-api   # wird von kustomization.yaml ersetzt
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: toni-secrets, key: dbPassword } }
+            - name: ConnectionStrings__Default
+              value: "Host=postgres;Database=toni;Username=toni;Password=$(DB_PASSWORD)"
+            - name: Toni__JwtKey
+              valueFrom: { secretKeyRef: { name: toni-secrets, key: jwtKey } }
+            - name: Toni__AdminUsername
+              value: admin
+            - name: Toni__AdminPassword
+              valueFrom: { secretKeyRef: { name: toni-secrets, key: adminPassword } }
+          # Kubernetes schickt erst Anfragen, wenn die API die Datenbank erreicht.
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8080 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  selector: { app: api }
+  ports:
+    - port: 80
+      targetPort: 8080

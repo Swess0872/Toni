@@ -1,0 +1,35 @@
+# OPTIONAL — nur anwenden, wenn noch kein Ingress-Controller im Cluster läuft.
+# Prüfen:  kubectl get ingressclass   (k3s bringt Traefik schon mit)
+#
+# Traefik lauscht direkt auf Port 80/443 jedes Nodes — passend für einen
+# selbst gehosteten Cluster ohne LoadBalancer.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: traefik
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://traefik.github.io/charts
+    chart: traefik
+    targetRevision: 42.1.3
+    helm:
+      valuesObject:
+        ingressClass:
+          isDefaultClass: true
+        deployment:
+          kind: DaemonSet
+        service:
+          type: ClusterIP
+        ports:
+          web:
+            hostPort: 80
+          websecure:
+            hostPort: 443
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: traefik
+  syncPolicy:
+    automated: {}
+    syncOptions: [CreateNamespace=true]

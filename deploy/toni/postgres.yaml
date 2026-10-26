@@ -1,0 +1,47 @@
+# Die Datenbank. Daten liegen auf einem 2-GB-Volume, das Neustarts überlebt.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: postgres
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          env:
+            - name: POSTGRES_DB
+              value: toni
+            - name: POSTGRES_USER
+              value: toni
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: toni-secrets, key: dbPassword } }
+            - name: PGDATA
+              value: /data/pgdata
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: { storage: 2Gi }
+---
+# Damit die API die Datenbank unter dem Namen "postgres" findet.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector: { app: postgres }
+  ports:
+    - port: 5432

@@ -1,5 +1,5 @@
 # Push to main → test → build images → push to GHCR → bump the image tag in
-# deploy/charts/toni/values.yaml. Argo CD sees the commit and rolls it out.
+# deploy/toni/kustomization.yaml. Argo CD sees the commit and rolls it out.
 name: Release
 
 on:
@@ -83,12 +83,12 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - name: Image-Tag in values.yaml setzen
+      - name: Neue Image-Version in kustomization.yaml eintragen
         env:
           TAG: ${{ needs.images.outputs.tag }}
           REGISTRY: ${{ needs.images.outputs.registry }}
         run: |
-          yq -i '.image.tag = strenv(TAG) | .image.registry = strenv(REGISTRY)' deploy/charts/toni/values.yaml
+          yq -i '.images[] |= (.newTag = strenv(TAG) | .newName = strenv(REGISTRY) + "/" + .name)' deploy/toni/kustomization.yaml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "deploy: toni $TAG" || exit 0

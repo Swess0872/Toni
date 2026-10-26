@@ -1,0 +1,40 @@
+# Von außen erreichbar unter https://toni.techstein.ch
+#   /api und /hubs  → API
+#   alles andere    → Web-App
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: toni
+  annotations:
+    cert-manager.io/issuer: letsencrypt   # holt das HTTPS-Zertifikat automatisch
+spec:
+  tls:
+    - hosts: [toni.techstein.ch]
+      secretName: toni-tls
+  rules:
+    - host: toni.techstein.ch
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend: { service: { name: api, port: { number: 80 } } }
+          - path: /hubs
+            pathType: Prefix
+            backend: { service: { name: api, port: { number: 80 } } }
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: web, port: { number: 80 } } }
+---
+# Bezieht kostenlose Zertifikate von Let's Encrypt (braucht cert-manager im Cluster).
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-account
+    solvers:
+      - http01:
+          ingress: {}

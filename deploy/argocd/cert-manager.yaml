@@ -1,0 +1,23 @@
+# OPTIONAL — nur anwenden, wenn cert-manager noch nicht im Cluster läuft.
+# Prüfen:  kubectl get crd certificates.cert-manager.io
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: v1.21.3
+    helm:
+      valuesObject:
+        crds:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated: {}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]

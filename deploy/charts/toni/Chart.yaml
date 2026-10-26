@@ -1,6 +1,0 @@
-apiVersion: v2
-name: toni
-description: Toni Strichsystem — API, Web-App und Postgres (CloudNativePG)
-type: application
-version: 0.1.0
-appVersion: "0.1.0"

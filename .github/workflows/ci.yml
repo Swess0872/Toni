@@ -35,13 +35,9 @@ jobs:
       - run: flutter analyze --no-fatal-infos
       - run: flutter test
 
-  helm:
-    name: Helm-Charts prüfen
+  deploy:
+    name: Kubernetes-YAML prüfen
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: azure/setup-helm@v4
-      - run: |
-          helm lint deploy/charts/toni
-          helm template deploy/charts/toni > /dev/null
-          helm lint deploy/platform --set repoURL=https://example.com/repo.git --set acmeEmail=ci@example.com
+      - run: kubectl kustomize deploy/toni > /dev/null

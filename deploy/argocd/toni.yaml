@@ -1,0 +1,21 @@
+# Sagt Argo CD: "Installiere deploy/toni aus diesem Repo und halte es aktuell."
+# Einmal anwenden:  kubectl apply -f deploy/argocd/toni.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: toni
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/OWNER/toni.git
+    targetRevision: main
+    path: deploy/toni
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: toni
+  syncPolicy:
+    automated:
+      prune: true      # löscht im Cluster, was aus Git entfernt wurde
+      selfHeal: true   # setzt Änderungen von Hand wieder auf den Git-Stand zurück
+    syncOptions: [CreateNamespace=true]
