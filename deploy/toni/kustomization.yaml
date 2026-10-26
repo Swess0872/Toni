@@ -1,19 +1,17 @@
 # Alles, was Toni im Cluster braucht. Argo CD liest diese Datei.
 namespace: toni
-
 resources:
   - postgres.yaml
   - api.yaml
   - web.yaml
   - ingress.yaml
-
 # Welche Image-Version läuft. Die Release-Pipeline setzt newName/newTag
 # nach jedem Build automatisch — von Hand muss hier nichts geändert werden.
 # (Image-Namen müssen kleingeschrieben sein.)
 images:
   - name: toni-api
     newName: ghcr.io/swess0872/toni-api
-    newTag: sha-ae969f3
+    newTag: sha-5d1743d
   - name: toni-web
     newName: ghcr.io/swess0872/toni-web
-    newTag: sha-ae969f3
+    newTag: sha-5d1743d
