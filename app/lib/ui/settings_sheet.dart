@@ -77,7 +77,7 @@ class SettingsForm extends StatelessWidget {
       ),
       Field(
         label: 'TV-Ansicht',
-        hint: 'grosse Schrift, Fernbedienung',
+        hint: 'große Schrift, Fernbedienung',
         child: Seg<TvMode>(
           full: true,
           value: s.tv,

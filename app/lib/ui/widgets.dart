@@ -642,7 +642,7 @@ class _SheetFrame extends StatelessWidget {
                 decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.line))),
                 child: Row(children: [
                   Expanded(child: Text(title, style: t.head(size: 19))),
-                  IconBtn(icon: Ic.close, tooltip: 'Schliessen', onPressed: () => Navigator.of(context).maybePop()),
+                  IconBtn(icon: Ic.close, tooltip: 'Schließen', onPressed: () => Navigator.of(context).maybePop()),
                 ]),
               ),
               Flexible(
