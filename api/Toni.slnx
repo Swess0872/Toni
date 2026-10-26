@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Toni.Api/Toni.Api.csproj" />
+  <Project Path="Toni.Api.Tests/Toni.Api.Tests.csproj" />
+</Solution>

@@ -1,0 +1,132 @@
+{{- if .Values.argocd.selfManaged }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: deploy/argocd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+{{- end }}
+{{- if .Values.traefik.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: traefik
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  project: default
+  source:
+    repoURL: https://traefik.github.io/charts
+    chart: traefik
+    targetRevision: {{ .Values.traefik.chartVersion }}
+    helm:
+      valuesObject:
+        ingressClass:
+          enabled: true
+          isDefaultClass: true
+        {{- if .Values.traefik.hostPorts }}
+        # Self-hosted cluster without a cloud load balancer: listen on 80/443 of every node.
+        deployment:
+          kind: DaemonSet
+        service:
+          type: ClusterIP
+        {{- end }}
+        ports:
+          web:
+            {{- if .Values.traefik.hostPorts }}
+            hostPort: 80
+            {{- end }}
+            allowACMEByPass: true
+            http:
+              redirections:
+                entryPoint:
+                  to: websecure
+                  scheme: https
+          {{- if .Values.traefik.hostPorts }}
+          websecure:
+            hostPort: 443
+          {{- end }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: traefik
+  {{- include "platform.syncPolicy" . | nindent 2 }}
+---
+{{- end }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  project: default
+  source:
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: {{ .Values.certManager.chartVersion }}
+    helm:
+      valuesObject:
+        crds:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  {{- include "platform.syncPolicy" . | nindent 2 }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudnative-pg
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  project: default
+  source:
+    repoURL: https://cloudnative-pg.github.io/charts
+    chart: cloudnative-pg
+    targetRevision: {{ .Values.cnpg.chartVersion }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cnpg-system
+  {{- include "platform.syncPolicy" . | nindent 2 }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: toni
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: deploy/charts/toni
+    {{- with .Values.imagePullSecret }}
+    helm:
+      valuesObject:
+        image:
+          pullSecret: {{ . }}
+    {{- end }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Values.toni.namespace }}
+  {{- include "platform.syncPolicy" . | nindent 2 }}

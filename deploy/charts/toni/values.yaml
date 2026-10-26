@@ -1,0 +1,34 @@
+# The release workflow rewrites image.registry and image.tag on every push to main.
+image:
+  registry: ghcr.io/OWNER
+  tag: latest
+  pullPolicy: IfNotPresent
+  # Name of a docker-registry secret in the namespace; only needed for private GHCR packages.
+  pullSecret: ""
+
+domain: toni.techstein.ch
+
+ingress:
+  className: traefik
+  clusterIssuer: letsencrypt
+
+api:
+  # Keep at 1: SignalR live updates are broadcast in-process (no Redis backplane).
+  replicas: 1
+  # Secret created by deploy/bootstrap/install.sh: jwtKey, adminUsername, adminPassword.
+  secretName: toni-secrets
+  demoMode: false
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 384Mi }
+
+web:
+  replicas: 1
+  resources:
+    requests: { cpu: 10m, memory: 16Mi }
+    limits: { memory: 64Mi }
+
+database:
+  instances: 1
+  storage: 2Gi
+  # storageClass: local-path
