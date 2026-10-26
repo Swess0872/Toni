@@ -11,8 +11,8 @@ resources:
 # nach jedem Build automatisch — von Hand muss hier nichts geändert werden.
 images:
   - name: toni-api
-    newName: ghcr.io/OWNER/toni-api
+    newName: ghcr.io/Swess0872/toni-api
     newTag: latest
   - name: toni-web
-    newName: ghcr.io/OWNER/toni-web
+    newName: ghcr.io/Swess0872/toni-web
     newTag: latest

@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/OWNER/toni.git
+    repoURL: https://github.com/Swess0872/toni.git
     targetRevision: main
     path: deploy/toni
   destination:
@@ -16,6 +16,6 @@ spec:
     namespace: toni
   syncPolicy:
     automated:
-      prune: true      # löscht im Cluster, was aus Git entfernt wurde
-      selfHeal: true   # setzt Änderungen von Hand wieder auf den Git-Stand zurück
+      prune: true # löscht im Cluster, was aus Git entfernt wurde
+      selfHeal: true # setzt Änderungen von Hand wieder auf den Git-Stand zurück
     syncOptions: [CreateNamespace=true]
