@@ -53,6 +53,15 @@ void main() {
     expect(() => store.addPerson('Eve'), throwsA(isA<ApiException>()));
   });
 
+  test('an HTML error page from the proxy counts as offline', () async {
+    final api = ApiClient('http://toni.test',
+        client: MockClient((_) async => http.Response('<html>502 Bad Gateway</html>', 502)));
+    expect(() => api.get('/state'), throwsA(isA<ApiException>().having((e) => e.offline, 'offline', isTrue)));
+
+    final html200 = ApiClient('http://toni.test', client: MockClient((_) async => http.Response('<html></html>', 200)));
+    expect(() => html200.get('/state'), throwsA(isA<ApiException>()));
+  });
+
   test('comes back online by itself on the next reload', () async {
     final server = _Server()..up = false;
     final store = await _start(server);

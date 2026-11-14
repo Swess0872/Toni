@@ -58,8 +58,16 @@ class ApiClient {
       throw ApiException.offline();
     }
 
+    // A proxy in front of the server (e.g. during a rollout) answers with an HTML
+    // error page; that counts as "server not reachable", not as a crash.
+    if (res.statusCode case 502 || 503 || 504) throw ApiException.offline();
     final text = utf8.decode(res.bodyBytes);
-    final json = text.isEmpty ? null : jsonDecode(text);
+    final dynamic json;
+    try {
+      json = text.isEmpty ? null : jsonDecode(text);
+    } on FormatException {
+      throw ApiException('Unerwartete Antwort vom Server (${res.statusCode}).', res.statusCode);
+    }
     if (res.statusCode >= 400) {
       final msg = json is Map && json['error'] is String
           ? json['error'] as String
