@@ -6,6 +6,7 @@ import '../core/models.dart';
 import '../core/store.dart';
 import 'layout.dart';
 import 'theme.dart';
+import 'votes.dart';
 import 'widgets.dart';
 
 void showPersonDetail(BuildContext context, Person person, Scope scope) {
@@ -62,7 +63,7 @@ class PersonDetail extends StatelessWidget {
             Text('$total ${total == 1 ? 'Strich' : 'Striche'} · $scopeLabel', style: t.body(size: 13, color: t.dim)),
           ]),
         ),
-        Tally(count: total, big: true, color: person.c),
+        Flexible(child: Tally(count: total, big: true, color: person.c)),
       ]),
       const SizedBox(height: 18),
       if (phone)
@@ -116,6 +117,15 @@ class PersonDetail extends StatelessWidget {
                 ),
             ]),
           ),
+      Center(
+        child: Btn(
+          variant: BtnVariant.ghost,
+          size: BtnSize.sm,
+          icon: Icons.how_to_vote_outlined,
+          onPressed: () => showVoteHistory(context, personId: person.id),
+          child: Text('Abstimmungen über ${person.name}'),
+        ),
+      ),
     ]);
   }
 }

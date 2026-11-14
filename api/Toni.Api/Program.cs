@@ -28,6 +28,8 @@ builder.Services.AddDbContext<ToniDb>(o =>
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddScoped<Seeder>();
+builder.Services.AddSingleton<MonthKeeper>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MonthKeeper>());
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

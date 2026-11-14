@@ -191,7 +191,7 @@ class _Header extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (lock) ...[Icon(Ic.lock, size: 14, color: on || hovered ? t.text : t.dim), const SizedBox(width: 6)],
+            if (lock) ...[Icon(Ic.admin, size: 14, color: on || hovered ? t.text : t.dim), const SizedBox(width: 6)],
             Text(label, style: t.body(size: narrow ? 14 : 15, weight: FontWeight.w600, color: on || hovered ? t.text : t.dim)),
           ]),
         ),
@@ -217,32 +217,8 @@ class _Header extends StatelessWidget {
                     Pressable(
                       onTap: () => onRoute(AppRoute.overview),
                       semanticLabel: 'Toni — Übersicht',
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Transform.rotate(
-                          angle: -0.07,
-                          child: Container(
-                            width: 38,
-                            height: 38,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: t.acid,
-                              borderRadius: BorderRadius.circular(11),
-                              boxShadow: [BoxShadow(color: t.acid.withValues(alpha: t.isDark ? 0.45 : 0.3), blurRadius: 22)],
-                            ),
-                            child: Text('T', style: t.head(size: 22, color: onAccent)),
-                          ),
-                        ),
-                        if (MediaQuery.sizeOf(context).width >= 400 || !store.isLoggedIn) ...[
-                          const SizedBox(width: 10),
-                          Text.rich(
-                            TextSpan(children: [
-                              const TextSpan(text: 'TONI'),
-                              TextSpan(text: 'strich', style: TextStyle(color: t.dim2, fontWeight: FontWeight.w500)),
-                            ]),
-                            style: t.head(size: narrow ? 18 : 21).copyWith(letterSpacing: 0.4, height: 1),
-                          ),
-                        ],
-                      ]),
+                      // Same artwork as the favicon (web/icons/toni-favicon.svg).
+                      child: Image.asset('assets/toni-logo.png', width: 38, height: 38, filterQuality: FilterQuality.medium),
                     ),
                     SizedBox(width: narrow ? 6 : 18),
                     if (!narrow) ...[
@@ -253,7 +229,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     if (narrow) ...[
                       IconBtn(
-                        icon: route == AppRoute.admin ? Icons.leaderboard_outlined : Ic.lock,
+                        icon: route == AppRoute.admin ? Icons.leaderboard_outlined : Ic.admin,
                         tooltip: route == AppRoute.admin ? 'Übersicht' : 'Admin',
                         onPressed: () => onRoute(route == AppRoute.admin ? AppRoute.overview : AppRoute.admin),
                       ),

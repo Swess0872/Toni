@@ -21,7 +21,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   Widget build(BuildContext context) {
     final t = context.t;
-    const tabs = [('personen', 'Personen & Logins'), ('perioden', 'Perioden'), ('aktionen', 'Aktionen')];
+    const tabs = [('personen', 'Personen'), ('perioden', 'Perioden'), ('aktionen', 'Aktionen')];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(
         padding: const EdgeInsets.all(4),
@@ -153,11 +153,12 @@ class _InlineEditState extends State<_InlineEdit> {
   }
 }
 
-Widget _smallInput(TextEditingController c, String hint, {bool obscure = false, double? width}) => SizedBox(
+Widget _smallInput(TextEditingController c, String hint, {bool obscure = false, double? width, TextInputType? keyboard}) => SizedBox(
       width: width,
       child: TextField(
         controller: c,
         obscureText: obscure,
+        keyboardType: keyboard,
         decoration: InputDecoration(hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10)),
       ),
     );
@@ -194,12 +195,14 @@ class _PeopleAdminState extends State<_PeopleAdmin> {
       title: 'Personen & Logins',
       desc: 'Wer Striche bekommt — und wer sich anmelden darf.',
       action: Row(mainAxisSize: MainAxisSize.min, children: [
-        SizedBox(
-          width: phone ? 170 : 200,
-          child: TextField(
-            controller: _name,
-            onSubmitted: (_) => _add(),
-            decoration: const InputDecoration(hintText: 'Neue Person…', contentPadding: EdgeInsets.symmetric(horizontal: 11, vertical: 10)),
+        Flexible(
+          child: SizedBox(
+            width: phone ? 170 : 200,
+            child: TextField(
+              controller: _name,
+              onSubmitted: (_) => _add(),
+              decoration: const InputDecoration(hintText: 'Neue Person…', contentPadding: EdgeInsets.symmetric(horizontal: 11, vertical: 10)),
+            ),
           ),
         ),
         const SizedBox(width: 7),
@@ -259,6 +262,8 @@ class _PersonCardState extends State<_PersonCard> {
     final acc = store.accountFor(p.id);
     final year = store.sel.currentYear;
 
+    final phone = formFactorOf(context) == FormFactor.phone;
+
     return Opacity(
       opacity: p.active ? 1 : 0.5,
       child: Container(
@@ -269,14 +274,22 @@ class _PersonCardState extends State<_PersonCard> {
             Avatar(person: p, size: 40),
             const SizedBox(width: 12),
             Expanded(
-              child: _InlineEdit(
-                value: p.name,
-                plain: true,
-                style: t.head(size: 16),
-                onSave: (v) => guarded(context, () => store.updatePerson(p.id, name: v)),
-              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                _InlineEdit(
+                  value: p.name,
+                  plain: true,
+                  style: t.head(size: 16),
+                  onSave: (v) => guarded(context, () => store.updatePerson(p.id, name: v)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: Text(
+                    '${store.sel.countInYear(p.id, year)} Striche $year${p.active ? '' : ' · deaktiviert'}',
+                    style: t.mono(size: 11.5, color: t.dim),
+                  ),
+                ),
+              ]),
             ),
-            Text('${store.sel.countInYear(p.id, year)} Striche $year', style: t.mono(size: 12)),
             IconBtn(
               icon: Ic.power,
               tooltip: p.active ? 'Deaktivieren' : 'Aktivieren',
@@ -298,10 +311,24 @@ class _PersonCardState extends State<_PersonCard> {
           const SizedBox(height: 11),
           if (acc != null)
             _LoginRow(account: acc, personName: p.name)
+          else if (_adding && phone)
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              _smallInput(_user, 'Benutzername'),
+              const SizedBox(height: 8),
+              _smallInput(_pw, 'Passwort', obscure: true),
+              const SizedBox(height: 10),
+              Row(children: [
+                _RoleToggle(value: _role, onChanged: (r) => setState(() => _role = r)),
+                const Spacer(),
+                IconBtn(icon: Ic.close, small: true, tooltip: 'Abbrechen', onPressed: () => setState(() => _adding = false)),
+                const SizedBox(width: 4),
+                Btn(size: BtnSize.sm, onPressed: _createLogin, child: const Text('Anlegen')),
+              ]),
+            ])
           else if (_adding)
             Wrap(spacing: 9, runSpacing: 9, crossAxisAlignment: WrapCrossAlignment.center, children: [
               _smallInput(_user, 'Benutzername', width: 150),
-              _smallInput(_pw, 'Passwort', width: 150),
+              _smallInput(_pw, 'Passwort', obscure: true, width: 150),
               _RoleToggle(value: _role, onChanged: (r) => setState(() => _role = r)),
               Btn(size: BtnSize.sm, onPressed: _createLogin, child: const Text('Login anlegen')),
               IconBtn(icon: Ic.close, small: true, tooltip: 'Abbrechen', onPressed: () => setState(() => _adding = false)),
@@ -314,7 +341,7 @@ class _PersonCardState extends State<_PersonCard> {
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Ic.plus),
                   const SizedBox(width: 6),
-                  Text('Login für ${p.name} anlegen'),
+                  Flexible(child: Text('Login für ${p.name} anlegen', maxLines: 2)),
                 ]),
               ),
             ),
@@ -365,69 +392,76 @@ class _LoginRowState extends State<_LoginRow> {
     final t = context.t;
     final store = context.read<ToniStore>();
     final acc = widget.account;
-    final admin = acc.isAdmin;
 
-    Widget labeled(String label, Widget child) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+    final phone = formFactorOf(context) == FormFactor.phone;
+
+    Widget labeled(String label, Widget child) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
           Text(label.toUpperCase(), style: t.mono(size: 10, color: t.dim2, letterSpacing: 0.5)),
           const SizedBox(height: 3),
           child,
         ]);
 
-    return Wrap(spacing: 9, runSpacing: 10, crossAxisAlignment: WrapCrossAlignment.end, children: [
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(color: admin ? t.acid.withValues(alpha: 0.18) : t.bg2, borderRadius: BorderRadius.circular(8)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(admin ? Ic.lock : Ic.user, size: 12, color: admin ? t.acidText : t.dim),
-          const SizedBox(width: 5),
-          Text(admin ? 'ADMIN' : 'MITGLIED', style: t.head(size: 11, color: admin ? t.acidText : t.dim)),
-        ]),
-      ),
-      labeled(
-        'Benutzer',
-        SizedBox(
-          width: 140,
-          child: _InlineEdit(value: acc.username, onSave: (v) => guarded(context, () => store.updateUser(acc.id, username: v))),
+    final username = _InlineEdit(value: acc.username, onSave: (v) => guarded(context, () => store.updateUser(acc.id, username: v)));
+    final role = _RoleToggle(value: acc.role, onChanged: (r) => guarded(context, () => store.updateUser(acc.id, role: r)));
+    final password = Row(children: [
+      Expanded(
+        child: TextField(
+          controller: _pw,
+          obscureText: true,
+          style: t.mono(size: 14, color: t.text),
+          decoration: const InputDecoration(hintText: '••••', contentPadding: EdgeInsets.symmetric(horizontal: 11, vertical: 10)),
         ),
       ),
-      labeled(
-        'Neues Passwort',
-        Row(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(
-            width: 130,
-            child: TextField(
-              controller: _pw,
-              obscureText: true,
-              style: t.mono(size: 14, color: t.text),
-              decoration: const InputDecoration(hintText: '••••', contentPadding: EdgeInsets.symmetric(horizontal: 11, vertical: 10)),
-            ),
-          ),
-          IconBtn(
-            icon: Ic.check,
-            small: true,
-            tooltip: 'Passwort setzen',
-            onPressed: () async {
-              if (_pw.text.isEmpty) return;
-              if (await guarded(context, () => store.updateUser(acc.id, password: _pw.text)) && context.mounted) {
-                _pw.clear();
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Passwort für ${widget.personName} gesetzt ✓')));
-              }
-            },
-          ),
-        ]),
-      ),
-      labeled('Rolle', _RoleToggle(value: acc.role, onChanged: (r) => guarded(context, () => store.updateUser(acc.id, role: r)))),
       IconBtn(
-        icon: Ic.trash,
+        icon: Ic.check,
         small: true,
-        danger: true,
-        tooltip: 'Login entfernen',
+        tooltip: 'Passwort setzen',
         onPressed: () async {
-          if (await confirmAction(context, 'Login von ${widget.personName} entfernen?', confirmLabel: 'Entfernen') && context.mounted) {
-            await guarded(context, () => store.removeUser(acc.id));
+          if (_pw.text.isEmpty) return;
+          if (await guarded(context, () => store.updateUser(acc.id, password: _pw.text)) && context.mounted) {
+            _pw.clear();
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Passwort für ${widget.personName} gesetzt ✓')));
           }
         },
       ),
+    ]);
+    Future<void> remove() async {
+      if (await confirmAction(context, 'Login von ${widget.personName} entfernen?', confirmLabel: 'Entfernen') && context.mounted) {
+        await guarded(context, () => store.removeUser(acc.id));
+      }
+    }
+
+    if (phone) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 8, children: [
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Ic.user, size: 14, color: t.dim),
+            const SizedBox(width: 6),
+            Text('LOGIN', style: t.mono(size: 10.5, color: t.dim2, letterSpacing: 0.5)),
+          ]),
+          role,
+        ]),
+        const SizedBox(height: 10),
+        labeled('Benutzer', username),
+        const SizedBox(height: 10),
+        labeled('Neues Passwort', password),
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: remove,
+            icon: Icon(Ic.trash, size: 16, color: t.neinText),
+            label: Text('Login entfernen', style: t.body(size: 13, weight: FontWeight.w600, color: t.neinText)),
+          ),
+        ),
+      ]);
+    }
+
+    return Wrap(spacing: 12, runSpacing: 10, crossAxisAlignment: WrapCrossAlignment.end, children: [
+      SizedBox(width: 160, child: labeled('Benutzer', username)),
+      SizedBox(width: 190, child: labeled('Neues Passwort', password)),
+      labeled('Rolle', role),
+      IconBtn(icon: Ic.trash, small: true, danger: true, tooltip: 'Login entfernen', onPressed: remove),
     ]);
   }
 }
@@ -490,30 +524,47 @@ class _PeriodsAdminState extends State<_PeriodsAdmin> {
     return _Section(
       title: 'Perioden & Anlässe',
       desc: 'Zeiträume, in denen Striche zählen — jeweils mit Start- und Enddatum.',
-      action: Wrap(spacing: 7, runSpacing: 7, crossAxisAlignment: WrapCrossAlignment.center, children: [
-        Seg<String>(mini: true, value: _mode, options: const [('monat', 'Monat'), ('freitext', 'Anlass')], onChanged: (v) => setState(() => _mode = v)),
-        if (_mode == 'monat') ...[
-          SizedBox(
-            width: 150,
-            child: DropdownButtonFormField<int>(
-              initialValue: _month,
-              isExpanded: true,
-              dropdownColor: t.bg1,
-              icon: Icon(Ic.chevron, color: t.dim),
-              decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 11, vertical: 10)),
-              items: [for (var i = 0; i < 12; i++) DropdownMenuItem(value: i, child: Text(monthsDe[i]))],
-              onChanged: (v) => setState(() => _month = v ?? _month),
-            ),
+      action: Seg<String>(mini: true, value: _mode, options: const [('monat', 'Monat'), ('freitext', 'Anlass')], onChanged: (v) => setState(() => _mode = v)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        // The add form sits on one line; an occasion's dates go on a second one.
+        Align(
+          alignment: Alignment.centerLeft,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: _mode == 'monat'
+                ? Row(children: [
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        initialValue: _month,
+                        isExpanded: true,
+                        dropdownColor: t.bg1,
+                        icon: Icon(Ic.chevron, color: t.dim),
+                        decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 11, vertical: 10)),
+                        items: [for (var i = 0; i < 12; i++) DropdownMenuItem(value: i, child: Text(monthsDe[i]))],
+                        onChanged: (v) => setState(() => _month = v ?? _month),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _smallInput(_year, 'Jahr', width: 80, keyboard: TextInputType.number),
+                    const SizedBox(width: 8),
+                    Btn(size: BtnSize.sm, icon: Ic.plus, onPressed: _add),
+                  ])
+                : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Row(children: [
+                      Expanded(child: _smallInput(_label, 'Anlass-Name…')),
+                      const SizedBox(width: 8),
+                      Btn(size: BtnSize.sm, icon: Ic.plus, onPressed: _add),
+                    ]),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Expanded(child: _DateButton(value: _start, hint: 'von', onPicked: (v) => setState(() => _start = v))),
+                      Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Text('–', style: TextStyle(color: t.dim2))),
+                      Expanded(child: _DateButton(value: _end, hint: 'bis', onPicked: (v) => setState(() => _end = v))),
+                    ]),
+                  ]),
           ),
-          _smallInput(_year, 'Jahr', width: 84),
-        ] else ...[
-          _smallInput(_label, 'Anlass-Name…', width: 170),
-          _DateButton(value: _start, hint: 'von', onPicked: (v) => setState(() => _start = v)),
-          _DateButton(value: _end, hint: 'bis', onPicked: (v) => setState(() => _end = v)),
-        ],
-        Btn(size: BtnSize.sm, icon: Ic.plus, onPressed: _add),
-      ]),
-      child: Column(children: [
+        ),
+        const SizedBox(height: 16),
         for (final p in store.sel.periodsNewestFirst()) Padding(padding: const EdgeInsets.only(bottom: 8), child: _PeriodRow(period: p)),
       ]),
     );
@@ -531,6 +582,26 @@ class _PeriodRow extends StatelessWidget {
     final store = context.read<ToniStore>();
     final live = store.sel.live(period);
     final ft = period.isFreitext;
+    final phone = formFactorOf(context) == FormFactor.phone;
+    final label = Row(mainAxisSize: MainAxisSize.min, children: [
+      if (ft) ...[Icon(Ic.bolt, size: 14, color: t.magentaText), const SizedBox(width: 8)],
+      Flexible(child: Text(periodLabel(period), style: t.head(size: 15, weight: FontWeight.w600))),
+      if (live) ...[const SizedBox(width: 8), const LiveTag()],
+    ]);
+    final start = _DateButton(value: period.start, hint: 'von', onPicked: (v) => guarded(context, () => store.updatePeriod(period.id, start: v)));
+    final end = _DateButton(value: period.end, hint: 'bis', onPicked: (v) => guarded(context, () => store.updatePeriod(period.id, end: v)));
+    final dash = Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Text('–', style: TextStyle(color: t.dim2)));
+    final remove = IconBtn(
+      icon: Ic.trash,
+      small: true,
+      danger: true,
+      tooltip: 'Löschen',
+      onPressed: () async {
+        if (await confirmAction(context, '${periodLabel(period)} mit allen Strichen löschen?') && context.mounted) {
+          await guarded(context, () => store.removePeriod(period.id));
+        }
+      },
+    );
     final content = Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
       decoration: BoxDecoration(
@@ -538,33 +609,17 @@ class _PeriodRow extends StatelessWidget {
         border: ft && !live ? null : Border.all(color: live ? t.acid : t.line),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Wrap(spacing: 12, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, alignment: WrapAlignment.spaceBetween, children: [
-        ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 150),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (ft) ...[Icon(Ic.bolt, size: 14, color: t.magentaText), const SizedBox(width: 8)],
-            Text(periodLabel(period), style: t.head(size: 15, weight: FontWeight.w600)),
-            if (live) ...[const SizedBox(width: 8), const LiveTag()],
-          ]),
-        ),
-        Row(mainAxisSize: MainAxisSize.min, children: [
-          _DateButton(value: period.start, hint: 'von', onPicked: (v) => guarded(context, () => store.updatePeriod(period.id, start: v))),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Text('–', style: TextStyle(color: t.dim2))),
-          _DateButton(value: period.end, hint: 'bis', onPicked: (v) => guarded(context, () => store.updatePeriod(period.id, end: v))),
-          const SizedBox(width: 4),
-          IconBtn(
-            icon: Ic.trash,
-            small: true,
-            danger: true,
-            tooltip: 'Löschen',
-            onPressed: () async {
-              if (await confirmAction(context, '${periodLabel(period)} mit allen Strichen löschen?') && context.mounted) {
-                await guarded(context, () => store.removePeriod(period.id));
-              }
-            },
-          ),
-        ]),
-      ]),
+      child: phone
+          // Phone: name and delete on top, the two dates sharing the second line.
+          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [Expanded(child: label), remove]),
+              const SizedBox(height: 6),
+              Row(children: [Expanded(child: start), dash, Expanded(child: end), const SizedBox(width: 4)]),
+            ])
+          : Wrap(spacing: 12, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, alignment: WrapAlignment.spaceBetween, children: [
+              ConstrainedBox(constraints: const BoxConstraints(minWidth: 150), child: label),
+              Row(mainAxisSize: MainAxisSize.min, children: [start, dash, end, const SizedBox(width: 4), remove]),
+            ]),
     );
     return ft && !live ? DashedBorder(color: t.line, radius: 12, child: content) : content;
   }

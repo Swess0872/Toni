@@ -129,8 +129,8 @@ class _WideBoardState extends State<WideBoard> {
     final sel = context.watch<ToniStore>().sel;
     final year = sel.currentYear;
     final List<({String key, String title, String sub, List<Ranked> rows, Scope scope})> views = [
-      (key: 'jahr', title: 'Jahr $year', sub: 'Monatssiege — wer führt die Saison an', rows: sel.yearWins(year), scope: YearScope(year)),
-      (key: 'alle', title: 'Alle Jahre', sub: 'Jahressiege — die ewige Hall of Shame', rows: sel.yearTitles(), scope: const AllScope()),
+      (key: 'jahr', title: 'Jahr $year', sub: 'Monatssiege', rows: sel.yearWins(year), scope: YearScope(year)),
+      (key: 'alle', title: 'Gesamt', sub: 'Jahressiege', rows: sel.yearTitles(), scope: const AllScope()),
     ];
     final v = views[_idx];
     void pick(Person p) => showPersonDetail(context, p, v.scope);
@@ -270,7 +270,7 @@ class _Pod extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Avatar(person: row.person, size: first ? 64 : 52),
           const SizedBox(height: 5),
-          Text(row.person.name, style: t.head(size: 14, weight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+          Text(row.person.name, style: t.head(size: 14, weight: FontWeight.w600), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 5),
           Tally(count: row.count, big: first, color: first ? t.amberText : t.text),
           const SizedBox(height: 8),
@@ -428,7 +428,7 @@ class _RankRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Tally(count: row.count),
+                Flexible(child: Tally(count: row.count)),
               ]),
               const SizedBox(height: 5),
               ClipRRect(

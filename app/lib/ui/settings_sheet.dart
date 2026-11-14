@@ -71,7 +71,7 @@ class SettingsForm extends StatelessWidget {
         child: Seg<TallyMode>(
           full: true,
           value: s.tally,
-          options: const [(TallyMode.roman, 'Römisch'), (TallyMode.zahl, 'Zahl'), (TallyMode.striche, 'Striche')],
+          options: const [(TallyMode.striche, 'Striche'), (TallyMode.roman, 'Römisch'), (TallyMode.zahl, 'Zahl')],
           onChanged: s.setTally,
         ),
       ),

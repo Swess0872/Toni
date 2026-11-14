@@ -17,6 +17,7 @@ abstract final class Ic {
   static const chevron = Icons.expand_more_rounded;
   static const chevronR = Icons.chevron_right_rounded;
   static const lock = Icons.lock_outline_rounded;
+  static const admin = Icons.admin_panel_settings_outlined;
   static const trash = Icons.delete_outline_rounded;
   static const user = Icons.person_outline_rounded;
   static const bolt = Icons.bolt_rounded;
@@ -662,7 +663,7 @@ class DashedButton extends StatelessWidget {
                 style: t.head(size: 13, weight: FontWeight.w600, color: c),
                 child: IconTheme(
                   data: IconThemeData(color: c, size: 15),
-                  child: Row(mainAxisSize: full ? MainAxisSize.max : MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [child]),
+                  child: Row(mainAxisSize: full ? MainAxisSize.max : MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [Flexible(child: child)]),
                 ),
               ),
             ),

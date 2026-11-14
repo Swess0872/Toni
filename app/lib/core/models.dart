@@ -109,6 +109,7 @@ class Vote {
     required this.createdBy,
     required this.createdAt,
     required this.status,
+    this.resolvedAt,
     required this.ballots,
   });
 
@@ -119,6 +120,7 @@ class Vote {
   final String? createdBy;
   final DateTime createdAt;
   final String status;
+  final DateTime? resolvedAt;
   /// personId → "ja" | "nein".
   final Map<String, String> ballots;
 
@@ -133,6 +135,7 @@ class Vote {
         createdBy: j['createdBy'] as String?,
         createdAt: DateTime.parse(j['createdAt'] as String),
         status: j['status'] as String,
+        resolvedAt: j['resolvedAt'] == null ? null : DateTime.parse(j['resolvedAt'] as String),
         ballots: (j['ballots'] as Map<String, dynamic>).map((k, v) => MapEntry(k, v as String)),
       );
 }

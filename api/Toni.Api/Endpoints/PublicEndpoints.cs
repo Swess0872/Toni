@@ -26,6 +26,15 @@ public static class PublicEndpoints
                 votes.OrderBy(v => v.CreatedAt).Select(VoteDto.From).ToList());
         });
 
+        // Evaluated votes with who voted what, newest first. Open ones are part of /state.
+        api.MapGet("/votes/history", async (ToniDb db) =>
+        {
+            var votes = await db.Votes.AsNoTracking().Include(v => v.Ballots)
+                .Where(v => v.Status != VoteStatus.Offen).ToListAsync();
+            // Sorted in memory: SQLite (tests) cannot order by DateTimeOffset.
+            return votes.OrderByDescending(v => v.ResolvedAt ?? v.CreatedAt).Take(200).Select(VoteDto.From).ToList();
+        });
+
         api.MapGet("/config", (IOptions<ToniOptions> o) => new ConfigDto(
             o.Value.DemoMode
                 ? Seeder.DemoLogins.Select(d => new DemoLoginDto(d.Username, d.Password, d.Role)).ToList()

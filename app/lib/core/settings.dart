@@ -12,7 +12,7 @@ class Settings extends ChangeNotifier {
     accent = _prefs.getString('toni_accent') ?? 'lime';
     fontHead = _prefs.getString('toni_font_head') ?? 'Space Grotesk';
     compact = _prefs.getBool('toni_compact') ?? false;
-    tally = TallyMode.values.asNameMap()[_prefs.getString('toni_tally')] ?? TallyMode.roman;
+    tally = TallyMode.values.asNameMap()[_prefs.getString('toni_tally')] ?? TallyMode.striche;
     tv = TvMode.values.asNameMap()[_prefs.getString('toni_tv')] ?? TvMode.auto;
   }
 

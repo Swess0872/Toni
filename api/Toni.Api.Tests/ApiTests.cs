@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Toni.Api.Contracts;
+using Toni.Api.Data;
 
 namespace Toni.Api.Tests;
 
@@ -68,6 +70,27 @@ public class ApiTests : IAsyncLifetime
         var state = await State(max);
         Assert.Empty(state.Votes);
         Assert.Contains(state.Strikes, s => s.Source == "abstimmung" && s.PersonId == vote.PersonId && s.Reason == vote.Reason);
+
+        // Evaluated votes stay visible with who voted what.
+        var history = await _factory.CreateClient().GetFromJsonAsync<List<VoteDto>>("/api/votes/history");
+        var past = history!.Single(v => v.Id == vote.Id);
+        Assert.Equal("angenommen", past.Status);
+        Assert.Equal(3, past.Ballots.Count);
+    }
+
+    [Fact]
+    public async Task Missing_month_is_created_once()
+    {
+        var keeper = _factory.Services.GetRequiredService<MonthKeeper>();
+        var day = new DateOnly(2099, 3, 15);
+
+        Assert.True(await keeper.EnsureCurrentMonthAsync(day));
+        Assert.False(await keeper.EnsureCurrentMonthAsync(day));
+
+        var months = (await State(_factory.CreateClient())).Periods.Where(p => p.Year == 2099 && p.Month == 2).ToList();
+        Assert.Single(months);
+        Assert.Equal(new DateOnly(2099, 3, 1), months[0].Start);
+        Assert.Equal(new DateOnly(2099, 3, 31), months[0].End);
     }
 
     [Fact]

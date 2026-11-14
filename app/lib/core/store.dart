@@ -215,6 +215,10 @@ class ToniStore extends ChangeNotifier {
 
   Future<void> removeStrike(String id) => _do(() => api.delete('/strikes/$id'));
 
+  /// Evaluated votes with who voted what, newest first. Loaded on demand, not cached.
+  Future<List<Vote>> voteHistory() async =>
+      [for (final v in await api.get('/votes/history') as List) Vote.fromJson(v as Map<String, dynamic>)];
+
   // ---- Profil ---------------------------------------------------------------
 
   Future<void> setMyColor(String color) => _do(() => api.put('/me/color', {'color': color}));

@@ -17,6 +17,9 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            # Ortszeit, damit der neue Monat um Mitternacht hier beginnt, nicht in UTC.
+            - name: TZ
+              value: Europe/Zurich
             - name: DB_PASSWORD
               valueFrom: { secretKeyRef: { name: toni-secrets, key: dbPassword } }
             - name: ConnectionStrings__Default

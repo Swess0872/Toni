@@ -5,6 +5,7 @@ import '../core/format.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 import 'theme.dart';
+import 'votes.dart';
 import 'widgets.dart';
 
 /// Live vote card, tinted with the target person's color.
@@ -85,7 +86,22 @@ class VoteBanner extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text('ABSTIMMUNG LÄUFT', style: t.head(size: 13, color: t.isDark ? vb : Color.lerp(vb, Colors.black, 0.35)).copyWith(letterSpacing: 0.8)),
                 ]),
-                Text('$voted/${sel.activePeople.length} abgestimmt · ${timeAgo(vote.createdAt)}', style: t.mono(size: 12)),
+                Hoverable(
+                  onTap: () => showVoteDetail(context, vote),
+                  semanticLabel: 'Wer hat wie gestimmt?',
+                  radius: BorderRadius.circular(8),
+                  builder: (context, hovered) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text(
+                        '$voted/${sel.activePeople.length} abgestimmt · ${timeAgo(vote.createdAt)}',
+                        style: t.mono(size: 12, color: hovered ? t.text : null),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(Icons.info_outline_rounded, size: 15, color: hovered ? t.text : t.dim),
+                    ]),
+                  ),
+                ),
               ]),
               const SizedBox(height: 14),
               Row(crossAxisAlignment: CrossAxisAlignment.center, children: [

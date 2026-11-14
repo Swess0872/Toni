@@ -108,7 +108,9 @@ class _AddStrikeFormState extends State<AddStrikeForm> {
           child: ShowMore(
             total: store.sel.activePeople.length,
             builder: (context, visible) => LayoutBuilder(builder: (context, c) {
-              final cols = ((c.maxWidth + 8) / (96 + 8)).floor().clamp(1, 6);
+              // As many columns as fit without cutting off the longest name.
+              final chipWidth = _NameChip.widthFor(context, store.sel.activePeople);
+              final cols = ((c.maxWidth + 8) / (chipWidth + 8)).floor().clamp(1, 6);
               final w = (c.maxWidth - 8 * (cols - 1)) / cols;
               return Wrap(spacing: 8, runSpacing: 8, children: [
                 for (final p in store.sel.activePeople.take(visible))
@@ -195,6 +197,23 @@ class _NameChip extends StatelessWidget {
   final bool on;
   final VoidCallback onTap;
 
+  static TextStyle _style(ToniTheme t) => t.body(size: 14, weight: FontWeight.w600);
+
+  /// Width a chip needs to show the longest of [people]'s names in full.
+  static double widthFor(BuildContext context, List<Person> people) {
+    final style = _style(context.t);
+    final scaler = MediaQuery.textScalerOf(context);
+    var widest = 0.0;
+    for (final p in people) {
+      final tp = TextPainter(text: TextSpan(text: p.name, style: style), textDirection: TextDirection.ltr, textScaler: scaler)
+        ..layout();
+      if (tp.width > widest) widest = tp.width;
+      tp.dispose();
+    }
+    // Padding 2×10, avatar 30, gap 8, border 2×2, some slack for rounding.
+    return widest + 20 + 30 + 8 + 4 + 2;
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = context.t;
@@ -214,7 +233,8 @@ class _NameChip extends StatelessWidget {
         child: Row(children: [
           Avatar(person: person, size: 30),
           const SizedBox(width: 8),
-          Expanded(child: Text(person.name, overflow: TextOverflow.ellipsis, style: t.body(size: 14, weight: FontWeight.w600))),
+          // Only a name too long for even one column wraps.
+          Expanded(child: Text(person.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: _style(t))),
         ]),
       ),
     );
