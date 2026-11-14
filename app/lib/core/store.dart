@@ -47,6 +47,7 @@ class ToniStore extends ChangeNotifier {
   HubConnection? _hub;
   Timer? _poll;
   Future<void>? _refreshing;
+  Future<void>? _queued;
 
   Future<void> init() async {
     api.token = _prefs.getString(_sessionKey);
@@ -103,8 +104,16 @@ class ToniStore extends ChangeNotifier {
     }
   }
 
-  /// Reloads everything; concurrent calls share one request.
-  Future<void> refresh() => _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
+  /// Reloads everything. A call during a running reload queues exactly one more,
+  /// because the running one may have started before the latest change.
+  Future<void> refresh() {
+    final running = _refreshing;
+    if (running == null) return _refreshing = _doRefresh().whenComplete(() => _refreshing = null);
+    return _queued ??= running.catchError((Object _) {}).then((_) {
+      _queued = null;
+      return refresh();
+    });
+  }
 
   Future<void> _doRefresh() async {
     _lastReload = DateTime.now();

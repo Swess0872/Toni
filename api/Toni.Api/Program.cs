@@ -80,6 +80,12 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
+// API answers are live data; no browser or proxy may serve an old copy.
+app.Use((ctx, next) =>
+{
+    if (ctx.Request.Path.StartsWithSegments("/api")) ctx.Response.Headers.CacheControl = "no-store";
+    return next();
+});
 
 var api = app.MapGroup("/api");
 api.MapPublic();
