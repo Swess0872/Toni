@@ -130,7 +130,7 @@ class VoteBanner extends StatelessWidget {
               const SizedBox(height: 16),
               _VoteBar(ja: ja, nein: nein),
               Padding(
-                padding: const EdgeInsets.only(top: 8, bottom: 16),
+                padding: const EdgeInsets.only(top: 8),
                 child: Row(children: [
                   Text('Ja $ja', style: t.mono(size: 13, weight: FontWeight.w700, color: t.jaText)),
                   const Spacer(),
@@ -149,6 +149,16 @@ class VoteBanner extends StatelessWidget {
                   const Spacer(),
                   Text('Nein $nein', style: t.mono(size: 13, weight: FontWeight.w700, color: t.neinText)),
                 ]),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: () => showVoteDetail(context, vote),
+                    icon: Icon(Icons.how_to_vote_outlined, size: 16, color: t.dim),
+                    label: Text('Wer hat wie gestimmt?', style: t.body(size: 13, weight: FontWeight.w600, color: t.dim)),
+                  ),
+                ),
               ),
               if (store.isLoggedIn) ...[
                 Row(children: [

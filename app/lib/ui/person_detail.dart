@@ -104,28 +104,50 @@ class PersonDetail extends StatelessWidget {
               for (final s in strikes)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      margin: const EdgeInsets.only(top: 7, right: 10),
-                      decoration: BoxDecoration(color: person.c, shape: BoxShape.circle),
-                    ),
-                    Expanded(child: Text(s.reason, style: t.body(size: 14, height: 1.45))),
-                    if (s.viaVote) Padding(padding: const EdgeInsets.only(left: 8), child: ToniBadge.vote(context)),
-                  ]),
+                  child: s.viaVote
+                      // Strikes from a vote open its result: who voted what.
+                      ? Hoverable(
+                          onTap: () => showStrikeVote(context, s),
+                          semanticLabel: 'Abstimmung ansehen',
+                          radius: BorderRadius.circular(8),
+                          builder: (context, hovered) => Container(
+                            color: hovered ? t.bg2 : Colors.transparent,
+                            child: _StrikeRow(strike: s, person: person),
+                          ),
+                        )
+                      : _StrikeRow(strike: s, person: person),
                 ),
             ]),
           ),
-      Center(
-        child: Btn(
-          variant: BtnVariant.ghost,
-          size: BtnSize.sm,
-          icon: Icons.how_to_vote_outlined,
-          onPressed: () => showVoteHistory(context, personId: person.id),
-          child: Text('Abstimmungen über ${person.name}'),
-        ),
+    ]);
+  }
+}
+
+class _StrikeRow extends StatelessWidget {
+  const _StrikeRow({required this.strike, required this.person});
+
+  final Strike strike;
+  final Person person;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.t;
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        width: 7,
+        height: 7,
+        margin: const EdgeInsets.only(top: 7, right: 10),
+        decoration: BoxDecoration(color: person.c, shape: BoxShape.circle),
       ),
+      Expanded(child: Text(strike.reason, style: t.body(size: 14, height: 1.45))),
+      if (strike.viaVote)
+        Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            ToniBadge.vote(context),
+            Icon(Ic.chevronR, size: 16, color: t.magentaText),
+          ]),
+        ),
     ]);
   }
 }

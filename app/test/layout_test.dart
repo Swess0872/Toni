@@ -27,6 +27,12 @@ Map<String, dynamic> _vote(String id, String status, Map<String, String> ballots
       'ballots': ballots,
     };
 
+// The strike the accepted vote v2 created.
+final _voteStrike = Strike(
+  id: 'sv', personId: 'p1', periodId: 'm', reason: 'Abwasch eine ganze Woche stehen lassen',
+  createdAt: DateTime.utc(2026, 11, 11, 10), source: 'abstimmung',
+);
+
 Future<ToniStore> _store() async {
   SharedPreferences.setMockInitialValues({});
   final now = DateTime.now();
@@ -98,7 +104,7 @@ void main() {
       final store = context.watch<ToniStore>();
       return Column(children: [
         TextButton(onPressed: () => showVoteDetail(context, store.data.votes.single), child: const Text('live')),
-        TextButton(onPressed: () => showVoteHistory(context), child: const Text('past')),
+        TextButton(onPressed: () => showStrikeVote(context, _voteStrike), child: const Text('past')),
       ]);
     }));
 
@@ -111,8 +117,8 @@ void main() {
     await tester.tap(find.text('past'));
     await tester.pumpAndSettle();
     expect(find.text('STRICH'), findsOneWidget);
-    await tester.tap(find.text('Feivel'));
-    await tester.pumpAndSettle();
     expect(find.text('STRICH! · 2'), findsOneWidget);
+    expect(find.text('FREISPRUCH · 1'), findsOneWidget);
   });
 }
+

@@ -22,32 +22,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget build(BuildContext context) {
     final t = context.t;
     const tabs = [('personen', 'Personen'), ('perioden', 'Perioden'), ('aktionen', 'Aktionen')];
+    final phone = formFactorOf(context) == FormFactor.phone;
+    Widget tab(String key, String label) => Pressable(
+          onTap: () => setState(() => _tab = key),
+          radius: BorderRadius.circular(9),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            constraints: const BoxConstraints(minHeight: 44),
+            alignment: Alignment.center,
+            padding: EdgeInsets.symmetric(horizontal: phone ? 6 : 18, vertical: 10),
+            decoration: BoxDecoration(color: _tab == key ? t.acid : Colors.transparent, borderRadius: BorderRadius.circular(9)),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.fade,
+              softWrap: false,
+              style: t.head(size: 15, weight: FontWeight.w600, color: _tab == key ? onAccent : t.dim),
+            ),
+          ),
+        );
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(
         padding: const EdgeInsets.all(4),
         margin: const EdgeInsets.only(bottom: 20),
         decoration: BoxDecoration(color: t.bg1, border: Border.all(color: t.line), borderRadius: BorderRadius.circular(13)),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(children: [
-            for (final (key, label) in tabs)
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: Pressable(
-                  onTap: () => setState(() => _tab = key),
-                  radius: BorderRadius.circular(9),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    constraints: const BoxConstraints(minHeight: 44),
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                    decoration: BoxDecoration(color: _tab == key ? t.acid : Colors.transparent, borderRadius: BorderRadius.circular(9)),
-                    child: Text(label, style: t.head(size: 15, weight: FontWeight.w600, color: _tab == key ? onAccent : t.dim)),
-                  ),
-                ),
-              ),
-          ]),
-        ),
+        // Phone: the tabs share the full width; larger screens keep them compact on the left.
+        child: phone
+            ? Row(children: [
+                for (final (i, (key, label)) in tabs.indexed) ...[if (i > 0) const SizedBox(width: 4), Expanded(child: tab(key, label))],
+              ])
+            : Row(children: [
+                for (final (key, label) in tabs) Padding(padding: const EdgeInsets.only(right: 4), child: tab(key, label)),
+              ]),
       ),
       ReadOnly(
         readOnly: context.watch<ToniStore>().offline,
