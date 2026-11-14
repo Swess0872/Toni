@@ -11,7 +11,7 @@ resources:
 images:
   - name: toni-api
     newName: ghcr.io/swess0872/toni-api
-    newTag: sha-1a410de
+    newTag: sha-e07afef
   - name: toni-web
     newName: ghcr.io/swess0872/toni-web
-    newTag: sha-1a410de
+    newTag: sha-e07afef
