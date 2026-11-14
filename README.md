@@ -59,19 +59,17 @@ Argo CD (im Cluster) ◄── sieht den Commit ──► rollt die neue Version
 | [deploy/toni/postgres.yaml](deploy/toni/postgres.yaml) | Datenbank mit 2-GB-Volume |
 | [deploy/toni/api.yaml](deploy/toni/api.yaml) | C#-Server |
 | [deploy/toni/web.yaml](deploy/toni/web.yaml) | Web-App (nginx) |
-| [deploy/toni/ingress.yaml](deploy/toni/ingress.yaml) | Adresse `toni.techstein.ch` + HTTPS-Zertifikat |
+| [deploy/toni/ingress.yaml](deploy/toni/ingress.yaml) | Adresse `toni.techstein.ch` (nur HTTP, HTTPS macht der Reverse Proxy) |
 | [deploy/argocd/toni.yaml](deploy/argocd/toni.yaml) | Sagt Argo CD, dass es `deploy/toni` installieren soll |
-| [deploy/argocd/cert-manager.yaml](deploy/argocd/cert-manager.yaml) | *Optional*, falls cert-manager fehlt |
 | [deploy/argocd/traefik.yaml](deploy/argocd/traefik.yaml) | *Optional*, falls noch kein Ingress-Controller läuft |
 
 ### Cluster einmalig einrichten
 
-Voraussetzungen: Argo CD läuft. Der DNS-Eintrag `toni.techstein.ch` zeigt auf die IP des Clusters, und die Ports 80/443 sind von außen erreichbar (Let's Encrypt prüft über Port 80).
+Voraussetzungen: Argo CD läuft. Vor dem Cluster steht ein Reverse Proxy, der HTTPS für `toni.techstein.ch` macht und auf **Port 80** des Clusters weiterleitet. Dabei muss er den Host-Header `toni.techstein.ch` mitschicken und WebSockets erlauben (Live-Updates laufen über `/hubs`).
 
-**1. Fehlt etwas?** cert-manager und einen Ingress-Controller braucht Toni. Nur anwenden, was fehlt:
+**1. Fehlt etwas?** Toni braucht einen Ingress-Controller:
 
 ```bash
-kubectl get crd certificates.cert-manager.io || kubectl apply -f deploy/argocd/cert-manager.yaml
 kubectl get ingressclass                     # leer? → kubectl apply -f deploy/argocd/traefik.yaml
 ```
 
@@ -87,7 +85,7 @@ kubectl -n toni create secret generic toni-secrets \
 
 Mit `admin` und diesem Passwort meldest du dich in Toni zum ersten Mal an.
 
-**3. Toni bei Argo CD anmelden.** In [deploy/argocd/toni.yaml](deploy/argocd/toni.yaml) `OWNER` durch deinen GitHub-Namen ersetzen, dann:
+**3. Toni bei Argo CD anmelden:**
 
 ```bash
 kubectl apply -f deploy/argocd/toni.yaml

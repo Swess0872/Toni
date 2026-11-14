@@ -1,16 +1,12 @@
-# Von außen erreichbar unter https://toni.techstein.ch
+# Erreichbar über http://toni.techstein.ch (Port 80 des Clusters).
+# HTTPS macht der Reverse Proxy davor und leitet unverschlüsselt hierher weiter.
 #   /api und /hubs  → API
 #   alles andere    → Web-App
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: toni
-  annotations:
-    cert-manager.io/issuer: letsencrypt   # holt das HTTPS-Zertifikat automatisch
 spec:
-  tls:
-    - hosts: [toni.techstein.ch]
-      secretName: toni-tls
   rules:
     - host: toni.techstein.ch
       http:
@@ -24,17 +20,3 @@ spec:
           - path: /
             pathType: Prefix
             backend: { service: { name: web, port: { number: 80 } } }
----
-# Bezieht kostenlose Zertifikate von Let's Encrypt (braucht cert-manager im Cluster).
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: letsencrypt
-spec:
-  acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
-    privateKeySecretRef:
-      name: letsencrypt-account
-    solvers:
-      - http01:
-          ingress: {}
