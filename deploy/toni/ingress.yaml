@@ -6,7 +6,10 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: toni
+  annotations:
+    nginx.org/websocket-services: api   # Live-Updates (SignalR) unter /hubs
 spec:
+  ingressClassName: nginx
   rules:
     - host: toni.techstein.ch
       http:
