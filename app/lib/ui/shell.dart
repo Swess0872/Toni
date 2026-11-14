@@ -178,7 +178,7 @@ class _Header extends StatelessWidget {
     final me = store.user;
     final mePerson = store.sel.person(me?.personId);
 
-    Widget navLink(AppRoute r, String label, {bool lock = false}) {
+    Widget navLink(AppRoute r, String label, {IconData? icon}) {
       final on = route == r;
       return Hoverable(
         onTap: () => onRoute(r),
@@ -191,7 +191,7 @@ class _Header extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (lock) ...[Icon(Ic.admin, size: 14, color: on || hovered ? t.text : t.dim), const SizedBox(width: 6)],
+            if (icon != null) ...[Icon(icon, size: 16, color: on || hovered ? t.text : t.dim), const SizedBox(width: 6)],
             Text(label, style: t.body(size: narrow ? 14 : 15, weight: FontWeight.w600, color: on || hovered ? t.text : t.dim)),
           ]),
         ),
@@ -224,7 +224,7 @@ class _Header extends StatelessWidget {
                     if (!narrow) ...[
                       navLink(AppRoute.overview, 'Übersicht'),
                       const SizedBox(width: 4),
-                      navLink(AppRoute.admin, 'Admin', lock: !store.isAdmin),
+                      navLink(AppRoute.admin, 'Admin', icon: Ic.admin),
                     ],
                     const Spacer(),
                     if (narrow) ...[
